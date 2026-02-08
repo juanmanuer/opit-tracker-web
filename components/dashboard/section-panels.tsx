@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 import {
-  initialAssessments,
   initialPractices,
   initialGrades,
   initialMiscItems,
@@ -30,8 +29,7 @@ import {
 // ==================== ASSESSMENTS PANEL ====================
 
 export function AssessmentsPanel() {
-  // We are defining your 15 specific assessments here to override the defaults
-  const [assessments, setAssessments] = useState<Assessment[]>([
+  const [assessments, setAssessments] = useState([
     { id: "1", title: "F. Math. (30%)", course: "Foundations", deadline: "2026-02-15", status: "todo" },
     { id: "2", title: "Web. Dev. (30%)", course: "Web Dev", deadline: "2026-02-11", status: "in-progress" },
     { id: "3", title: "IOS (40%)", course: "Mobile Dev", deadline: "2026-02-22", status: "todo" },
@@ -47,7 +45,7 @@ export function AssessmentsPanel() {
     { id: "13", title: "F. Math. (35%)", course: "Foundations", deadline: "2026-04-12", status: "todo" },
     { id: "14", title: "Web Dev. (30%)", course: "Web Dev", deadline: "2026-04-07", status: "todo" },
     { id: "15", title: "IOS (10%)", course: "Mobile Dev", deadline: "2026-04-12", status: "todo" },
-  ])
+  ] as Assessment[])
 
   const [adding, setAdding] = useState(false)
   const [newTitle, setNewTitle] = useState("")
@@ -85,7 +83,6 @@ export function AssessmentsPanel() {
 
   const getDaysUntil = (deadline: string) => {
     if (deadline === "TBD") return null
-    // Since today is Feb 8, 2026, the code will calculate the countdown correctly!
     const diff = Math.ceil((new Date(deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     return diff
   }
@@ -105,7 +102,6 @@ export function AssessmentsPanel() {
       <div className="flex flex-col gap-2">
         {assessments.map((a) => {
           const days = getDaysUntil(a.deadline)
-          // Visual alert logic: If it's less than 3 days away, it glows red
           const urgent = days !== null && days <= 3 && days >= 0 && a.status !== "done"
           return (
             <div
@@ -143,12 +139,36 @@ export function AssessmentsPanel() {
           )
         })}
       </div>
-{/* ... keep the rest of your original code starting from the {adding && ... block */}
+
+      {adding && (
+        <div className="flex flex-col gap-2 rounded-lg border border-[hsl(var(--primary)/0.3)] bg-[hsl(var(--card))] p-3">
+          <input
+            type="text"
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            placeholder="Title..."
+            className="bg-transparent text-xs text-[hsl(var(--foreground))] outline-none"
+          />
+          <input
+            type="date"
+            value={newDeadline}
+            onChange={(e) => setNewDeadline(e.target.value)}
+            className="bg-transparent text-[10px] text-[hsl(var(--muted-foreground))] outline-none"
+          />
+          <div className="flex gap-2">
+            <button onClick={handleAdd} className="text-[10px] text-[hsl(var(--primary))] font-medium">Add</button>
+            <button onClick={() => setAdding(false)} className="text-[10px] text-[hsl(var(--muted-foreground))]">Cancel</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ==================== PRACTICES PANEL ====================
 
 export function PracticesPanel() {
-  const [practices, setPractices] = useState<Practice[]>(initialPractices)
+  const [practices, setPractices] = useState(initialPractices as Practice[])
   const [adding, setAdding] = useState(false)
   const [newTitle, setNewTitle] = useState("")
 
@@ -182,7 +202,6 @@ export function PracticesPanel() {
         </button>
       </div>
 
-      {/* Progress bar */}
       <div className="h-1.5 rounded-full bg-[hsl(var(--muted))] overflow-hidden">
         <div
           className="h-full rounded-full bg-[hsl(var(--primary))] transition-all duration-500"
@@ -226,7 +245,7 @@ export function PracticesPanel() {
             onChange={(e) => setNewTitle(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAdd()}
             placeholder="Practice title..."
-            className="flex-1 bg-transparent text-xs text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] outline-none"
+            className="flex-1 bg-transparent text-xs text-[hsl(var(--foreground))] outline-none"
             autoFocus
           />
           <button onClick={handleAdd} className="text-[10px] font-medium text-[hsl(var(--primary))]">Add</button>
@@ -256,7 +275,6 @@ export function GradesPanel() {
   return (
     <div className="flex flex-col gap-3">
       <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">Grades</h3>
-
       <div className="rounded-lg border border-border overflow-hidden">
         <table className="w-full text-left">
           <thead>
@@ -348,18 +366,10 @@ export function MiscPanel() {
                   <span className="text-xs font-medium text-[hsl(var(--foreground))]">{item.label}</span>
                 </div>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => (isEditing ? saveEdit(item.id) : startEdit(item))}
-                    className="p-1 rounded text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] transition-colors"
-                    aria-label={isEditing ? "Save" : "Edit"}
-                  >
+                  <button onClick={() => (isEditing ? saveEdit(item.id) : startEdit(item))} className="p-1 rounded text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))]">
                     {isEditing ? <Check className="h-3 w-3" /> : <Pencil className="h-3 w-3" />}
                   </button>
-                  <button
-                    onClick={() => removeItem(item.id)}
-                    className="p-1 rounded text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))] transition-colors"
-                    aria-label="Remove"
-                  >
+                  <button onClick={() => removeItem(item.id)} className="p-1 rounded text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))]">
                     <X className="h-3 w-3" />
                   </button>
                 </div>
@@ -369,19 +379,12 @@ export function MiscPanel() {
                   type="text"
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && saveEdit(item.id)}
-                  className="mt-1.5 w-full bg-transparent text-[10px] text-[hsl(var(--primary))] outline-none border-b border-[hsl(var(--primary)/0.3)] pb-0.5"
+                  className="mt-1.5 w-full bg-transparent text-[10px] text-[hsl(var(--primary))] border-b border-[hsl(var(--primary)/0.3)] outline-none"
                   autoFocus
                 />
               ) : (
-                <a
-                  href={item.type === "email" ? `mailto:${item.value}` : item.value}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 mt-1.5 text-[10px] text-[hsl(var(--primary))] hover:underline"
-                >
-                  {item.value}
-                  <ExternalLink className="h-2.5 w-2.5" />
+                <a href={item.type === "email" ? `mailto:${item.value}` : item.value} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 mt-1.5 text-[10px] text-[hsl(var(--primary))] hover:underline">
+                  {item.value} <ExternalLink className="h-2.5 w-2.5" />
                 </a>
               )}
             </div>
@@ -390,20 +393,16 @@ export function MiscPanel() {
       </div>
 
       {adding && (
-        <div className="rounded-lg border border-[hsl(var(--primary)/0.3)] bg-[hsl(var(--card))] p-3 flex flex-col gap-2 neon-glow-cyan">
-          <input type="text" value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder="Label..." className="bg-transparent text-xs text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] outline-none" autoFocus />
-          <input type="text" value={newValue} onChange={(e) => setNewValue(e.target.value)} placeholder="URL or email..." className="bg-transparent text-[10px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] outline-none" />
+        <div className="rounded-lg border border-[hsl(var(--primary)/0.3)] bg-[hsl(var(--card))] p-3 flex flex-col gap-2">
+          <input type="text" value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder="Label..." className="bg-transparent text-xs text-[hsl(var(--foreground))] outline-none" />
+          <input type="text" value={newValue} onChange={(e) => setNewValue(e.target.value)} placeholder="URL..." className="bg-transparent text-[10px] text-[hsl(var(--foreground))] outline-none" />
           <div className="flex items-center gap-2">
-            <select
-              value={newType}
-              onChange={(e) => setNewType(e.target.value as MiscItem["type"])}
-              className="bg-[hsl(var(--muted))] text-[10px] text-[hsl(var(--foreground))] rounded px-2 py-1 outline-none border-none"
-            >
+            <select value={newType} onChange={(e) => setNewType(e.target.value as MiscItem["type"])} className="bg-[hsl(var(--muted))] text-[10px] rounded px-1">
               <option value="email">Email</option>
               <option value="zoom">Zoom</option>
               <option value="link">Link</option>
             </select>
-            <button onClick={handleAdd} className="text-[10px] font-medium text-[hsl(var(--primary))]">Add</button>
+            <button onClick={handleAdd} className="text-[10px] text-[hsl(var(--primary))]">Add</button>
             <button onClick={() => setAdding(false)} className="text-[10px] text-[hsl(var(--muted-foreground))]">Cancel</button>
           </div>
         </div>
@@ -445,28 +444,20 @@ export function AttendancePanel() {
           {rate}%
         </span>
       </div>
-
-      {/* Rate bar */}
       <div className="h-1.5 rounded-full bg-[hsl(var(--muted))] overflow-hidden">
         <div
-          className={cn("h-full rounded-full transition-all duration-500", rate >= 80 ? "bg-[hsl(160,100%,50%)]" : rate >= 60 ? "bg-[hsl(var(--neon-yellow))]" : "bg-[hsl(var(--destructive))]")}
+          className={cn("h-full transition-all duration-500", rate >= 80 ? "bg-[hsl(160,100%,50%)]" : rate >= 60 ? "bg-[hsl(var(--neon-yellow))]" : "bg-[hsl(var(--destructive))]")}
           style={{ width: `${rate}%` }}
         />
       </div>
-
       <div className="flex flex-col gap-1.5">
         {records.map((r) => (
           <div key={r.id} className="flex items-center justify-between rounded-lg border border-border bg-[hsl(var(--card))] px-3 py-2.5">
             <div>
               <p className="text-xs text-[hsl(var(--foreground))]">{r.course}</p>
-              <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-                {new Date(r.date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-              </p>
+              <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{new Date(r.date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
             </div>
-            <button
-              onClick={() => cycleStatus(r.id)}
-              className={cn("text-[9px] font-medium px-2 py-0.5 rounded-full transition-colors", statusStyles[r.status].style)}
-            >
+            <button onClick={() => cycleStatus(r.id)} className={cn("text-[9px] font-medium px-2 py-0.5 rounded-full transition-colors", statusStyles[r.status].style)}>
               {statusStyles[r.status].label}
             </button>
           </div>
