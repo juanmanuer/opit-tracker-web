@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@layer base {
+  :root {
+    --background: 240 20% 4%;
+    --foreground: 220 10% 93%;
+    --card: 240 15% 8%;
+    --card-foreground: 220 10% 93%;
+    --popover: 240 15% 10%;
+    --popover-foreground: 220 10% 93%;
+    --primary: 187 100% 50%;
+    --primary-foreground: 240 20% 4%;
+    --secondary: 310 100% 64%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 240 10% 14%;
+    --muted-foreground: 240 5% 50%;
+    --accent: 187 80% 42%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 10% 16%;
+    --input: 240 10% 16%;
+    --ring: 187 100% 50%;
+    --chart-1: 187 100% 50%;
+    --chart-2: 310 100% 64%;
+    --chart-3: 160 60% 45%;
+    --chart-4: 45 90% 60%;
+    --chart-5: 270 70% 60%;
+    --radius: 0.625rem;
+    --sidebar-background: 240 18% 6%;
+    --sidebar-foreground: 220 10% 80%;
+    --sidebar-primary: 187 100% 50%;
+    --sidebar-primary-foreground: 240 20% 4%;
+    --sidebar-accent: 240 12% 12%;
+    --sidebar-accent-foreground: 220 10% 93%;
+    --sidebar-border: 240 10% 14%;
+    --sidebar-ring: 187 100% 50%;
+    --neon-cyan: 187 100% 50%;
+    --neon-pink: 310 100% 64%;
+    --neon-green: 160 100% 50%;
+    --neon-yellow: 45 100% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(240 15% 8%);
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(240 10% 20%);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(187 100% 50% / 0.4);
+}
+
+/* Neon glow utilities */
+.neon-glow-cyan {
+  box-shadow: 0 0 8px hsl(187 100% 50% / 0.3), 0 0 20px hsl(187 100% 50% / 0.1);
+}
+.neon-glow-pink {
+  box-shadow: 0 0 8px hsl(310 100% 64% / 0.3), 0 0 20px hsl(310 100% 64% / 0.1);
+}
+.neon-text-cyan {
+  text-shadow: 0 0 10px hsl(187 100% 50% / 0.5);
+}
+.neon-text-pink {
+  text-shadow: 0 0 10px hsl(310 100% 64% / 0.5);
+}
