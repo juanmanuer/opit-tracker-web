@@ -93,3 +93,32 @@ export function AssessmentsPanel({ activeTerm }: PanelProps) {
 // ── Practices ──────────────────────────────────────────────────────────────
 export function PracticesPanel({ activeTerm }: PanelProps) {
   const [pract
+
+
+import { TERM_COURSES, type Term, type Course } from "@/lib/store"
+
+export function CoursesPanel({ activeTerm }: { activeTerm: Term }) {
+  const courses = TERM_COURSES[activeTerm]
+
+  return (
+    <div className="flex flex-col gap-3">
+      <h3 className="text-xs font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
+        {activeTerm} — Courses
+      </h3>
+      {courses.length === 0 ? (
+        <p className="text-xs text-[hsl(var(--muted-foreground))]">No courses yet for {activeTerm}.</p>
+      ) : (
+        courses.map((course: Course) => (
+          <div
+            key={course.code}
+            className="rounded-lg p-3 text-white shadow-md"
+            style={{ backgroundColor: course.color }}
+          >
+            <p className="text-[10px] font-semibold uppercase opacity-70">{course.code}</p>
+            <p className="text-xs font-bold mt-0.5">{course.name}</p>
+          </div>
+        ))
+      )}
+    </div>
+  )
+}         
