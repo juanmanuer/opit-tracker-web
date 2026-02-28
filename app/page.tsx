@@ -14,6 +14,7 @@ import {
   GradesPanel,
   MiscPanel,
   AttendancePanel,
+  CoursesPanel,
 } from "@/components/dashboard/section-panels"
 import type { Term, SidebarSection } from "@/lib/store"
 import { LayoutGrid, Calendar } from "lucide-react"
