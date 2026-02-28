@@ -1,5 +1,6 @@
 "use client"
 
+import { BookOpen } from "lucide-react" // add to existing lucide import line
 import { cn } from "@/lib/utils"
 import type { SidebarSection } from "@/lib/store"
 import {
@@ -25,6 +26,8 @@ const sections: { key: SidebarSection; label: string; icon: typeof ClipboardList
   { key: "grades", label: "Grades", icon: BarChart3, description: "Scores & weights" },
   { key: "misc", label: "Misc", icon: Mail, description: "Emails & Zoom links" },
   { key: "attendance", label: "Attendance", icon: CalendarCheck, description: "Class participation" },
+  { key: "courses", label: "Courses", icon: BookOpen, description: "Enrolled courses" },
+
 ]
 
 export function Sidebar({ activeSection, onSectionChange, collapsed, onToggleCollapse }: SidebarProps) {
