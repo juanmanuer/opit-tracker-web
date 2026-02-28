@@ -28,12 +28,13 @@ const [activeTerm, setActiveTerm] = useState<Term>("Term 2")
   const [mainView, setMainView] = useState<"kanban" | "calendar">("kanban")
 
   const sectionPanels: Record<SidebarSection, React.ReactNode> = {
-    assessments: <AssessmentsPanel />,
-    practices: <PracticesPanel />,
-    grades: <GradesPanel />,
-    misc: <MiscPanel />,
-    attendance: <AttendancePanel />,
-  }
+  assessments: <AssessmentsPanel />,
+  practices: <PracticesPanel />,
+  grades: <GradesPanel />,
+  misc: <MiscPanel />,
+  attendance: <AttendancePanel />,
+  courses: <CoursesPanel activeTerm={activeTerm} />,
+}
 
   return (
     <>
