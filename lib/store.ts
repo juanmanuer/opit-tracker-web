@@ -118,3 +118,27 @@ export const initialCalendarEvents: CalendarEvent[] = [
   { id: "e7", title: "Stats Quiz 3", date: "2026-03-05", type: "exam", time: "15:00" },
   { id: "e8", title: "Philosophy Seminar", date: "2026-02-11", type: "class", time: "16:00" },
 ]
+
+
+// ── Course catalogue per term ──────────────────────────────────────────────
+
+export interface Course {
+  code: string
+  name: string
+  color: string
+}
+
+export const TERM_COURSES: Record<Term, Course[]> = {
+  "Term 1": [
+    { code: "COMP-1001", name: "Technical English",      color: "#4F46E5" },
+    { code: "COMP-1002", name: "Computer Networks",      color: "#059669" },
+    { code: "COMP-1003", name: "Programming Principles", color: "#DC2626" },
+    { code: "COMP-1004", name: "Computer Architectures", color: "#D97706" },
+    { code: "COMP-1005", name: "ICT Fundamentals",       color: "#7C3AED" },
+  ],
+  "Term 2": [],
+  "Term 3": [],
+  "Term 4": [],
+  "Term 5": [],
+  "Term 6": [],
+}
