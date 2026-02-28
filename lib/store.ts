@@ -2,7 +2,7 @@
 
 export type Term = "Term 1" | "Term 2" | "Term 3" | "Term 4" | "Term 5" | "Term 6"
 
-export type SidebarSection = "assessments" | "practices" | "grades" | "misc" | "attendance"
+export type SidebarSection = "assessments" | "practices" | "grades" | "misc" | "attendance" | "courses"
 
 export interface Assessment {
   id: string
