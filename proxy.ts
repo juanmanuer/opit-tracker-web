@@ -1,16 +1,20 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { SESSION_COOKIE } from "@/lib/auth"
+import { getToken } from "next-auth/jwt"
 
-export function proxy(request: NextRequest) {
-  const session = request.cookies.get(SESSION_COOKIE)
+export async function proxy(request: NextRequest) {
+  const token = await getToken({
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET,
+  })
+
   const isLoginPage = request.nextUrl.pathname === "/login"
 
-  if (!session && !isLoginPage) {
+  if (!token && !isLoginPage) {
     return NextResponse.redirect(new URL("/login", request.url))
   }
 
-  if (session && isLoginPage) {
+  if (token && isLoginPage) {
     return NextResponse.redirect(new URL("/", request.url))
   }
 
