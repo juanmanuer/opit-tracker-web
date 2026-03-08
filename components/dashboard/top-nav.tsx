@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils"
 import { TERMS, type Term } from "@/lib/store"
-import { Bell, Search, User } from "lucide-react"
+import { Bell, Search, User, LogOut } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 
