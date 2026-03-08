@@ -7,7 +7,6 @@ import { Sidebar } from "@/components/dashboard/sidebar"
 import { TopNav } from "@/components/dashboard/top-nav"
 import { KanbanBoard } from "@/components/dashboard/kanban-board"
 import { CalendarView } from "@/components/dashboard/calendar-view"
-import { LoginOverlay } from "@/components/dashboard/login-overlay"
 import {
   AssessmentsPanel,
   PracticesPanel,
@@ -21,7 +20,6 @@ import { LayoutGrid, Calendar } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export default function Page() {
-  const [loggedIn, setLoggedIn] = useState(false)
 const [activeTerm, setActiveTerm] = useState<Term>("Term 2")
   const [activeSection, setActiveSection] = useState<SidebarSection>("assessments")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -38,7 +36,6 @@ const [activeTerm, setActiveTerm] = useState<Term>("Term 2")
 
   return (
     <>
-      {!loggedIn && <LoginOverlay onLogin={() => setLoggedIn(true)} />}
 
       <div className="flex h-screen overflow-hidden">
         {/* Sidebar */}
