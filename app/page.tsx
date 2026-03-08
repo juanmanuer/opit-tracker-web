@@ -1,5 +1,7 @@
 "use client"
 
+export const dynamic = "force-dynamic"
+
 import React from "react"
 
 import { useState } from "react"
@@ -26,11 +28,11 @@ const [activeTerm, setActiveTerm] = useState<Term>("Term 2")
   const [mainView, setMainView] = useState<"kanban" | "calendar">("kanban")
 
   const sectionPanels: Record<SidebarSection, React.ReactNode> = {
-  assessments: <AssessmentsPanel />,
-  practices: <PracticesPanel />,
-  grades: <GradesPanel />,
-  misc: <MiscPanel />,
-  attendance: <AttendancePanel />,
+  assessments: <AssessmentsPanel activeTerm={activeTerm} />,
+  practices: <PracticesPanel activeTerm={activeTerm} />,
+  grades: <GradesPanel activeTerm={activeTerm} />,
+  misc: <MiscPanel activeTerm={activeTerm} />,
+  attendance: <AttendancePanel activeTerm={activeTerm} />,
   courses: <CoursesPanel activeTerm={activeTerm} />,
 }
 
