@@ -8,7 +8,9 @@ export interface Assessment {
   id: string
   title: string
   course: string
+  courseCode: string
   deadline: string
+  weight: string
   status: "todo" | "in-progress" | "done"
 }
 
@@ -61,12 +63,27 @@ export interface CalendarEvent {
 export const TERMS: Term[] = ["Term 1", "Term 2", "Term 3", "Term 4", "Term 5", "Term 6"]
 
 export const initialAssessments: Assessment[] = [
-  { id: "a1", title: "Linear Algebra Midterm", course: "Mathematics", deadline: "2026-02-15", status: "in-progress" },
-  { id: "a2", title: "Data Structures Project", course: "Computer Science", deadline: "2026-02-20", status: "todo" },
-  { id: "a3", title: "Ethics Essay", course: "Philosophy", deadline: "2026-02-28", status: "todo" },
-  { id: "a4", title: "Statistics Quiz 3", course: "Mathematics", deadline: "2026-03-05", status: "done" },
+  // COMP-2001 Foundational Mathematics
+  { id: "t2-a1",  title: "Assessment 1", courseCode: "COMP-2001", course: "Foundational Mathematics",         deadline: "TBD", weight: "30%", status: "todo" },
+  { id: "t2-a2",  title: "Assessment 2", courseCode: "COMP-2001", course: "Foundational Mathematics",         deadline: "TBD", weight: "35%", status: "todo" },
+  { id: "t2-a3",  title: "Assessment 3", courseCode: "COMP-2001", course: "Foundational Mathematics",         deadline: "TBD", weight: "35%", status: "todo" },
+  // COMP-2005 Project Management and QA
+  { id: "t2-b1",  title: "Assessment 1", courseCode: "COMP-2005", course: "Project Management and QA",        deadline: "TBD", weight: "50%", status: "todo" },
+  { id: "t2-b2",  title: "Assessment 2", courseCode: "COMP-2005", course: "Project Management and QA",        deadline: "TBD", weight: "50%", status: "todo" },
+  // COMP-2002 Web Development
+  { id: "t2-c1",  title: "Assessment 1", courseCode: "COMP-2002", course: "Web Development",                  deadline: "TBD", weight: "30%", status: "todo" },
+  { id: "t2-c2",  title: "Assessment 2", courseCode: "COMP-2002", course: "Web Development",                  deadline: "TBD", weight: "40%", status: "todo" },
+  { id: "t2-c3",  title: "Assessment 3", courseCode: "COMP-2002", course: "Web Development",                  deadline: "TBD", weight: "30%", status: "todo" },
+  // COMP-2003 Introduction to Operating Systems
+  { id: "t2-d1",  title: "Assessment 1", courseCode: "COMP-2003", course: "Introduction to Operating Systems", deadline: "TBD", weight: "40%", status: "todo" },
+  { id: "t2-d2",  title: "Assessment 2", courseCode: "COMP-2003", course: "Introduction to Operating Systems", deadline: "TBD", weight: "10%", status: "todo" },
+  { id: "t2-d3",  title: "Assessment 3", courseCode: "COMP-2003", course: "Introduction to Operating Systems", deadline: "TBD", weight: "40%", status: "todo" },
+  { id: "t2-d4",  title: "Assessment 4", courseCode: "COMP-2003", course: "Introduction to Operating Systems", deadline: "TBD", weight: "10%", status: "todo" },
+  // COMP-2004 Data Structure and Algorithms
+  { id: "t2-e1",  title: "Assessment 1", courseCode: "COMP-2004", course: "Data Structure and Algorithms",    deadline: "TBD", weight: "35%", status: "todo" },
+  { id: "t2-e2",  title: "Assessment 2", courseCode: "COMP-2004", course: "Data Structure and Algorithms",    deadline: "TBD", weight: "35%", status: "todo" },
+  { id: "t2-e3",  title: "Assessment 3", courseCode: "COMP-2004", course: "Data Structure and Algorithms",    deadline: "TBD", weight: "30%", status: "todo" },
 ]
-
 export const initialPractices: Practice[] = [
   { id: "p1", title: "Binary Trees Worksheet", course: "Computer Science", completed: true },
   { id: "p2", title: "Matrix Operations Set 5", course: "Mathematics", completed: false },
@@ -136,7 +153,14 @@ export const TERM_COURSES: Record<Term, Course[]> = {
     { code: "COMP-1004", name: "Computer Architectures", color: "#D97706" },
     { code: "COMP-1005", name: "ICT Fundamentals",       color: "#7C3AED" },
   ],
-  "Term 2": [],
+  "Term 2": [
+  { code: "COMP-2001", name: "Foundational Mathematics",          color: "#4F46E5" },
+  { code: "COMP-2002", name: "Web Development",                   color: "#059669" },
+  { code: "COMP-2003", name: "Introduction to Operating Systems", color: "#DC2626" },
+  { code: "COMP-2004", name: "Data Structure and Algorithms",     color: "#D97706" },
+  { code: "COMP-2005", name: "Project Management and QA",         color: "#7C3AED" },
+],
+  
   "Term 3": [],
   "Term 4": [],
   "Term 5": [],

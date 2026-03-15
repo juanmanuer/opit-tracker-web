@@ -29,6 +29,7 @@ interface PanelProps {
 
 export function AssessmentsPanel({ activeTerm }: PanelProps) {
   const [assessments, setAssessments] = useState(initialAssessments)
+  const [openCourses, setOpenCourses] = useState<Record<string, boolean>>({})
   const courses = TERM_COURSES[activeTerm]
 
   const toggle = (id: string) => {
@@ -39,60 +40,87 @@ export function AssessmentsPanel({ activeTerm }: PanelProps) {
     )
   }
 
+  const toggleCourse = (code: string) => {
+    setOpenCourses((prev) => ({ ...prev, [code]: !prev[code] }))
+  }
+
   return (
-    <div className="flex flex-col gap-4">
-      {courses.length > 0 && (
-        <div className="flex flex-col gap-1.5">
-          <p className="text-[10px] font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
-            {activeTerm} Courses
-          </p>
-          <div className="flex flex-col gap-1.5">
-            {courses.map((c) => (
-              <div
-                key={c.code}
-                className="flex items-center gap-2 rounded-lg px-3 py-2"
-                style={{ backgroundColor: c.color + "20", borderLeft: "3px solid " + c.color }}
+    <div className="flex flex-col gap-3">
+      {courses.length === 0 ? (
+        <p className="text-xs text-[hsl(var(--muted-foreground))]">No courses yet for {activeTerm}.</p>
+      ) : (
+        courses.map((course) => {
+          const courseAssessments = assessments.filter((a) => a.courseCode === course.code)
+          const doneCount = courseAssessments.filter((a) => a.status === "done").length
+          const isOpen = openCourses[course.code] !== false // default open
+          return (
+            <div
+              key={course.code}
+              className="rounded-lg border border-border overflow-hidden"
+            >
+              {/* Course header */}
+              <button
+                onClick={() => toggleCourse(course.code)}
+                className="w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors hover:opacity-90"
+                style={{ backgroundColor: course.color + "22", borderLeft: "3px solid " + course.color }}
               >
                 <div className="min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: c.color }}>
-                    {c.code}
+                  <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: course.color }}>
+                    {course.code}
                   </p>
-                  <p className="text-xs font-medium text-[hsl(var(--foreground))] truncate">{c.name}</p>
+                  <p className="text-xs font-semibold text-[hsl(var(--foreground))] truncate">{course.name}</p>
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      <div className="flex flex-col gap-1.5">
-        <p className="text-[10px] font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
-          Upcoming
-        </p>
-        {assessments.map((a) => (
-          <button
-            key={a.id}
-            onClick={() => toggle(a.id)}
-            className="flex items-start gap-2.5 rounded-lg p-2.5 text-left hover:bg-[hsl(var(--muted))] transition-colors"
-          >
-            {a.status === "done" ? (
-              <Check className="h-3.5 w-3.5 mt-0.5 shrink-0 text-[hsl(160,100%,50%)]" />
-            ) : (
-              <Circle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-[hsl(var(--muted-foreground))]" />
-            )}
-            <div className="min-w-0">
-              <p className={cn("text-xs font-medium leading-tight", a.status === "done" && "line-through text-[hsl(var(--muted-foreground))]")}>
-                {a.title}
-              </p>
-              <p className="text-[10px] text-[hsl(var(--muted-foreground))] mt-0.5">
-                {a.course} · {a.deadline}
-              </p>
+                <div className="flex items-center gap-2 shrink-0 ml-2">
+                  <span className="text-[10px] text-[hsl(var(--muted-foreground))]">
+                    {doneCount}/{courseAssessments.length}
+                  </span>
+                  <span
+                    className="text-[10px] text-[hsl(var(--muted-foreground))] transition-transform duration-200"
+                    style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}
+                  >
+                    ▾
+                  </span>
+                </div>
+              </button>
+
+              {/* Assessment rows */}
+              {isOpen && (
+                <div className="flex flex-col divide-y divide-border">
+                  {courseAssessments.map((a) => (
+                    <button
+                      key={a.id}
+                      onClick={() => toggle(a.id)}
+                      className="flex items-center gap-2.5 px-3 py-2 text-left hover:bg-[hsl(var(--muted))] transition-colors w-full"
+                    >
+                      {a.status === "done" ? (
+                        <Check className="h-3.5 w-3.5 shrink-0 text-[hsl(160,100%,50%)]" />
+                      ) : (
+                        <Circle className="h-3.5 w-3.5 shrink-0 text-[hsl(var(--muted-foreground))]" />
+                      )}
+                      <p className={cn(
+                        "text-xs font-medium flex-1 leading-tight",
+                        a.status === "done" && "line-through text-[hsl(var(--muted-foreground))]"
+                      )}>
+                        {a.title}
+                      </p>
+                      <span
+                        className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md shrink-0"
+                        style={{ backgroundColor: course.color + "22", color: course.color }}
+                      >
+                        {a.weight}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-          </button>
-        ))}
-      </div>
+          )
+        })
+      )}
     </div>
   )
 }
+
 
 export function PracticesPanel({ activeTerm }: PanelProps) {
   const [practices, setPractices] = useState(initialPractices)
