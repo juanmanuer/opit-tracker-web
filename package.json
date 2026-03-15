@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-"build": "prisma generate && next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint ."
   },
@@ -75,6 +75,11 @@
   "pnpm": {
     "overrides": {
       "date-fns": "^4.1.0"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "@prisma/engines",
+      "prisma",
+      "sharp"
+    ]
   }
 }
