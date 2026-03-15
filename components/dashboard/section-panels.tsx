@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import {
   initialAssessments,
@@ -32,12 +32,31 @@ export function AssessmentsPanel({ activeTerm }: PanelProps) {
   const [openCourses, setOpenCourses] = useState<Record<string, boolean>>({})
   const courses = TERM_COURSES[activeTerm]
 
-  const toggle = (id: string) => {
+  useEffect(() => {
+    fetch("/api/user/assessments")
+      .then((r) => r.json())
+      .then((data: { assessmentId: string; status: string }[]) => {
+        if (!Array.isArray(data)) return
+        setAssessments((prev) =>
+          prev.map((a) => {
+            const saved = data.find((d) => d.assessmentId === a.id)
+            return saved ? { ...a, status: saved.status as "todo" | "in-progress" | "done" } : a
+          })
+        )
+      })
+  }, [])
+
+  const toggle = async (id: string) => {
+    const current = assessments.find((a) => a.id === id)
+    const newStatus = current?.status === "done" ? "todo" : "done"
     setAssessments((prev) =>
-      prev.map((a) =>
-        a.id === id ? { ...a, status: a.status === "done" ? "todo" : "done" } : a
-      )
+      prev.map((a) => (a.id === id ? { ...a, status: newStatus } : a))
     )
+    await fetch("/api/user/assessments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ assessmentId: id, status: newStatus }),
+    })
   }
 
   const toggleCourse = (code: string) => {
@@ -52,13 +71,9 @@ export function AssessmentsPanel({ activeTerm }: PanelProps) {
         courses.map((course) => {
           const courseAssessments = assessments.filter((a) => a.courseCode === course.code)
           const doneCount = courseAssessments.filter((a) => a.status === "done").length
-          const isOpen = openCourses[course.code] !== false // default open
+          const isOpen = openCourses[course.code] !== false
           return (
-            <div
-              key={course.code}
-              className="rounded-lg border border-border overflow-hidden"
-            >
-              {/* Course header */}
+            <div key={course.code} className="rounded-lg border border-border overflow-hidden">
               <button
                 onClick={() => toggleCourse(course.code)}
                 className="w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors hover:opacity-90"
@@ -82,8 +97,6 @@ export function AssessmentsPanel({ activeTerm }: PanelProps) {
                   </span>
                 </div>
               </button>
-
-              {/* Assessment rows */}
               {isOpen && (
                 <div className="flex flex-col divide-y divide-border">
                   {courseAssessments.map((a) => (
@@ -120,7 +133,6 @@ export function AssessmentsPanel({ activeTerm }: PanelProps) {
     </div>
   )
 }
-
 
 export function PracticesPanel({ activeTerm }: PanelProps) {
   const [practices, setPractices] = useState(initialPractices)
