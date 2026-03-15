@@ -36,6 +36,7 @@ export function AssessmentsPanel({ activeTerm }: PanelProps) {
     fetch("/api/user/assessments")
       .then((r) => r.json())
       .then((data: { assessmentId: string; status: string }[]) => {
+        console.log("Assessments API response:", data)
         if (!Array.isArray(data)) return
         setAssessments((prev) =>
           prev.map((a) => {
@@ -44,6 +45,7 @@ export function AssessmentsPanel({ activeTerm }: PanelProps) {
           })
         )
       })
+      .catch((err) => console.error("Assessments fetch error:", err))
   }, [])
 
   const toggle = async (id: string) => {
