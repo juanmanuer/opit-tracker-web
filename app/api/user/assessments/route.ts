@@ -9,7 +9,7 @@ export async function GET() {
     if (!session?.user?.email) return NextResponse.json([], { status: 401 })
 
     const rows = await sql`
-      SELECT assessment_id, status 
+      SELECT assessment_id as "assessmentId", status 
       FROM user_assessments 
       WHERE email = ${session.user.email}
     `
