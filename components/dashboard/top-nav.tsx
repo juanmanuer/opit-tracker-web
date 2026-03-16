@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 import { TERMS, type Term } from "@/lib/store"
 import { Bell, Search, User, LogOut } from "lucide-react"
 import { useRouter } from "next/navigation"
-
+import { signOut } from "next-auth/react"
 
 interface TopNavProps {
   activeTerm: Term
@@ -13,10 +13,8 @@ interface TopNavProps {
 
 export function TopNav({ activeTerm, onTermChange }: TopNavProps) {
   const router = useRouter()
-  async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" })
-    router.push("/login")
-    router.refresh()
+async function handleLogout() {
+    await signOut({ callbackUrl: "/login" })
   }
 
   return (
