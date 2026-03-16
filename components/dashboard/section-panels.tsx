@@ -178,10 +178,10 @@ export function GradesPanel({ activeTerm }: PanelProps) {
   const [loading, setLoading] = useState(false)
   const [lastSynced, setLastSynced] = useState<string | null>(null)
 
-  const sync = async () => {
+const sync = async () => {
     setLoading(true)
     try {
-      const res = await fetch("/api/canvas/sync")
+      const res = await fetch(`/api/canvas/sync?term=${encodeURIComponent(activeTerm)}`)
       const data = await res.json()
       if (Array.isArray(data)) {
         setCanvasData(data)
@@ -259,6 +259,11 @@ export function GradesPanel({ activeTerm }: PanelProps) {
 
 function getCourseColor(code: string): string {
   const colors: Record<string, string> = {
+    "COMP-1001": "#4F46E5",
+    "COMP-1002": "#059669",
+    "COMP-1003": "#DC2626",
+    "COMP-1004": "#D97706",
+    "COMP-1005": "#7C3AED",
     "COMP-2001": "#4F46E5",
     "COMP-2002": "#059669",
     "COMP-2003": "#DC2626",
