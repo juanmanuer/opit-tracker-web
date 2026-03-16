@@ -174,29 +174,98 @@ export function PracticesPanel({ activeTerm }: PanelProps) {
 }
 
 export function GradesPanel({ activeTerm }: PanelProps) {
+  const [canvasData, setCanvasData] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  const [lastSynced, setLastSynced] = useState<string | null>(null)
+
+  const sync = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch("/api/canvas/sync")
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        setCanvasData(data)
+        setLastSynced(new Date().toLocaleTimeString())
+      }
+    } catch (err) {
+      console.error("Sync failed:", err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
-    <div className="flex flex-col gap-1.5">
-      <p className="text-[10px] font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-1">
-        Grades
-      </p>
-      {initialGrades.map((g) => (
-        <div
-          key={g.id}
-          className="flex items-center justify-between rounded-lg p-2.5 bg-[hsl(var(--muted))]"
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
+          Grades
+        </p>
+        <button
+          onClick={sync}
+          disabled={loading}
+          className="flex items-center gap-1 text-[10px] font-medium px-2 py-1 rounded-md bg-[hsl(var(--primary)/0.15)] text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary)/0.25)] transition-colors disabled:opacity-50"
         >
-          <div className="min-w-0">
-            <p className="text-xs font-medium truncate">{g.assessment}</p>
-            <p className="text-[10px] text-[hsl(var(--muted-foreground))] mt-0.5">
-              {g.course} · {g.weight}
-            </p>
-          </div>
-          <span className="text-sm font-bold text-[hsl(var(--primary))] ml-2 shrink-0">
-            {g.grade}
-          </span>
+          {loading ? "Syncing..." : "⟳ Sync Canvas"}
+        </button>
+      </div>
+      {lastSynced && (
+        <p className="text-[9px] text-[hsl(var(--muted-foreground))]">Last synced: {lastSynced}</p>
+      )}
+
+      {canvasData.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border p-4 text-center">
+          <p className="text-xs text-[hsl(var(--muted-foreground))]">Click "Sync Canvas" to load your real grades and upcoming assignments.</p>
         </div>
-      ))}
+      ) : (
+        canvasData.map((course) => (
+          <div key={course.courseCode} className="rounded-lg border border-border overflow-hidden">
+            <div
+              className="px-3 py-2"
+              style={{
+                backgroundColor: getCourseColor(course.courseCode) + "22",
+                borderLeft: "3px solid " + getCourseColor(course.courseCode),
+              }}
+            >
+              <p className="text-[10px] font-bold uppercase" style={{ color: getCourseColor(course.courseCode) }}>
+                {course.courseCode}
+              </p>
+              <div className="flex items-center justify-between mt-0.5">
+                <p className="text-xs font-semibold text-[hsl(var(--foreground))]">{course.courseName}</p>
+                {course.gradeInfo?.currentScore != null && (
+                  <span className="text-sm font-bold text-[hsl(var(--primary))]">
+                    {course.gradeInfo.currentScore}%
+                  </span>
+                )}
+              </div>
+            </div>
+            {course.upcoming.length > 0 && (
+              <div className="divide-y divide-border">
+                {course.upcoming.slice(0, 3).map((a: any) => (
+                  <div key={a.id} className="flex items-center justify-between px-3 py-1.5">
+                    <p className="text-[10px] text-[hsl(var(--foreground))] truncate flex-1">{a.title}</p>
+                    <span className="text-[9px] text-[hsl(var(--muted-foreground))] shrink-0 ml-2">
+                      {new Date(a.dueAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))
+      )}
     </div>
   )
+}
+
+function getCourseColor(code: string): string {
+  const colors: Record<string, string> = {
+    "COMP-2001": "#4F46E5",
+    "COMP-2002": "#059669",
+    "COMP-2003": "#DC2626",
+    "COMP-2004": "#D97706",
+    "COMP-2005": "#7C3AED",
+  }
+  return colors[code] ?? "#6B7280"
 }
 
 export function MiscPanel({ activeTerm }: PanelProps) {
