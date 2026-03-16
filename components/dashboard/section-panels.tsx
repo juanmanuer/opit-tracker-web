@@ -238,41 +238,173 @@ export function MiscPanel({ activeTerm }: PanelProps) {
 }
 
 export function AttendancePanel({ activeTerm }: PanelProps) {
-  const getIcon = (status: string) => {
-    if (status === "present") return CheckCircle2
-    if (status === "absent") return XCircle
-    return MinusCircle
+  const courses = TERM_COURSES[activeTerm]
+  const [attendance, setAttendance] = useState<Record<string, Record<number, string>>>({})
+  const [openCourses, setOpenCourses] = useState<Record<string, boolean>>({})
+  const [celebrating, setCelebrating] = useState<Record<string, boolean>>({})
+
+  useEffect(() => {
+    fetch("/api/user/attendance")
+      .then((r) => r.json())
+      .then((data: { courseCode: string; lessonNumber: number; status: string }[]) => {
+        if (!Array.isArray(data)) return
+        const mapped: Record<string, Record<number, string>> = {}
+        data.forEach(({ courseCode, lessonNumber, status }) => {
+          if (!mapped[courseCode]) mapped[courseCode] = {}
+          mapped[courseCode][lessonNumber] = status
+        })
+        setAttendance(mapped)
+      })
+      .catch(console.error)
+  }, [])
+
+  const toggle = async (courseCode: string, lessonNumber: number) => {
+    const current = attendance[courseCode]?.[lessonNumber] ?? "absent"
+    const newStatus = current === "present" ? "absent" : "present"
+
+    const updated = {
+      ...attendance,
+      [courseCode]: { ...attendance[courseCode], [lessonNumber]: newStatus },
+    }
+    setAttendance(updated)
+
+    const presentCount = Object.values(updated[courseCode]).filter((s) => s === "present").length
+    if (presentCount === 7) {
+      setCelebrating((prev) => ({ ...prev, [courseCode]: true }))
+      setTimeout(() => setCelebrating((prev) => ({ ...prev, [courseCode]: false })), 3000)
+    }
+
+    await fetch("/api/user/attendance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ courseCode, lessonNumber, status: newStatus }),
+    })
   }
 
-  const getColor = (status: string) => {
-    if (status === "present") return "text-[hsl(160,100%,50%)]"
-    if (status === "absent") return "text-red-400"
-    return "text-yellow-400"
+  const toggleCourse = (code: string) => {
+    setOpenCourses((prev) => ({ ...prev, [code]: !prev[code] }))
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <p className="text-[10px] font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-1">
-        Attendance
+    <div className="flex flex-col gap-3">
+      <p className="text-[10px] font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
+        Synchronous Lessons · {activeTerm}
       </p>
-      {initialAttendance.map((r) => {
-        const Icon = getIcon(r.status)
-        return (
-          <div
-            key={r.id}
-            className="flex items-center gap-2.5 rounded-lg p-2.5 bg-[hsl(var(--muted))]"
-          >
-            <Icon className={"h-3.5 w-3.5 " + getColor(r.status)} />
-            <div className="min-w-0">
-              <p className="text-xs font-medium truncate">{r.course}</p>
-              <p className="text-[10px] text-[hsl(var(--muted-foreground))] mt-0.5">{r.date}</p>
+      {courses.length === 0 ? (
+        <p className="text-xs text-[hsl(var(--muted-foreground))]">No courses yet for {activeTerm}.</p>
+      ) : (
+        courses.map((course) => {
+          const courseAttendance = attendance[course.code] ?? {}
+          const presentCount = Object.values(courseAttendance).filter((s) => s === "present").length
+          const bonusUnlocked = presentCount >= 7
+          const isOpen = openCourses[course.code] !== false
+          const isCelebrating = celebrating[course.code]
+
+          return (
+            <div
+              key={course.code}
+              className="rounded-lg border overflow-hidden transition-all duration-300"
+              style={{
+                borderColor: bonusUnlocked ? course.color : "hsl(var(--border))",
+                boxShadow: bonusUnlocked ? `0 0 12px ${course.color}44` : "none",
+              }}
+            >
+              {/* Course header */}
+              <button
+                onClick={() => toggleCourse(course.code)}
+                className="w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors hover:opacity-90"
+                style={{ backgroundColor: course.color + "22", borderLeft: "3px solid " + course.color }}
+              >
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: course.color }}>
+                    {course.code}
+                  </p>
+                  <p className="text-xs font-semibold text-[hsl(var(--foreground))] truncate">{course.name}</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0 ml-2">
+                  {bonusUnlocked && (
+                    <span
+                      className="text-[9px] font-bold px-1.5 py-0.5 rounded-full animate-pulse"
+                      style={{ backgroundColor: course.color + "33", color: course.color }}
+                    >
+                      +5 pts
+                    </span>
+                  )}
+                  <span className="text-[10px] text-[hsl(var(--muted-foreground))]">
+                    {presentCount}/13
+                  </span>
+                  <span
+                    className="text-[10px] text-[hsl(var(--muted-foreground))]"
+                    style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block", transition: "transform 0.2s" }}
+                  >
+                    ▾
+                  </span>
+                </div>
+              </button>
+
+              {/* Celebration banner */}
+              {isCelebrating && (
+                <div
+                  className="px-3 py-2 text-center text-xs font-bold animate-bounce"
+                  style={{ backgroundColor: course.color + "22", color: course.color }}
+                >
+                  🎉 Bonus unlocked! +5 points for {course.code}!
+                </div>
+              )}
+
+              {/* Bonus progress bar */}
+              {isOpen && (
+                <div className="px-3 pt-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[9px] text-[hsl(var(--muted-foreground))]">
+                      {bonusUnlocked ? "🏆 Bonus achieved!" : `${7 - presentCount} more for +5 bonus`}
+                    </span>
+                    <span className="text-[9px] font-medium" style={{ color: course.color }}>
+                      {presentCount}/7
+                    </span>
+                  </div>
+                  <div className="h-1 rounded-full bg-[hsl(var(--muted))] overflow-hidden mb-3">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{
+                        width: `${Math.min((presentCount / 7) * 100, 100)}%`,
+                        backgroundColor: course.color,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Lesson grid */}
+              {isOpen && (
+                <div className="px-3 pb-3 grid grid-cols-7 gap-1.5">
+                  {Array.from({ length: 13 }, (_, i) => i + 1).map((lesson) => {
+                    const status = courseAttendance[lesson] ?? "absent"
+                    const isPresent = status === "present"
+                    return (
+                      <button
+                        key={lesson}
+                        onClick={() => toggle(course.code, lesson)}
+                        className="flex flex-col items-center justify-center rounded-lg p-1.5 text-[9px] font-bold transition-all duration-200 hover:scale-110 active:scale-95"
+                        style={{
+                          backgroundColor: isPresent ? course.color + "33" : "hsl(var(--muted))",
+                          color: isPresent ? course.color : "hsl(var(--muted-foreground))",
+                          border: isPresent ? `1px solid ${course.color}66` : "1px solid transparent",
+                          boxShadow: isPresent ? `0 0 6px ${course.color}44` : "none",
+                        }}
+                        title={`Lesson ${lesson}: ${isPresent ? "Present" : "Absent"}`}
+                      >
+                        <span>{lesson}</span>
+                        <span className="text-[8px] mt-0.5">{isPresent ? "✓" : "✗"}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
             </div>
-            <span className={"ml-auto text-[10px] font-medium capitalize shrink-0 " + getColor(r.status)}>
-              {r.status}
-            </span>
-          </div>
-        )
-      })}
+          )
+        })
+      )}
     </div>
   )
 }
