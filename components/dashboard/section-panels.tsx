@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { cn } from "@/lib/utils"
+import { GradeCalculator } from "@/components/dashboard/grade-calculator"
 import {
   initialAssessments,
   initialPractices,
@@ -177,6 +177,7 @@ export function GradesPanel({ activeTerm }: PanelProps) {
   const [canvasData, setCanvasData] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [lastSynced, setLastSynced] = useState<string | null>(null)
+  const [showCalculator, setShowCalculator] = useState(false)
 
 const sync = async () => {
     setLoading(true)
@@ -196,17 +197,27 @@ const sync = async () => {
 
   return (
     <div className="flex flex-col gap-3">
+{showCalculator && (
+        <GradeCalculator activeTerm={activeTerm} onClose={() => setShowCalculator(false)} />
+      )}
       <div className="flex items-center justify-between">
         <p className="text-[10px] font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
           Grades
         </p>
+        <div className="flex items-center gap-2">
+        <button
+          onClick={() => setShowCalculator(true)}
+          className="flex items-center gap-1 text-[10px] font-medium px-2 py-1 rounded-md bg-[hsl(var(--secondary)/0.15)] text-[hsl(var(--secondary))] hover:bg-[hsl(var(--secondary)/0.25)] transition-colors"
+        >
+          ⌗ Calculator
+        </button>
         <button
           onClick={sync}
-          disabled={loading}
           className="flex items-center gap-1 text-[10px] font-medium px-2 py-1 rounded-md bg-[hsl(var(--primary)/0.15)] text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary)/0.25)] transition-colors disabled:opacity-50"
         >
           {loading ? "Syncing..." : "⟳ Sync Canvas"}
         </button>
+        </div>
       </div>
       {lastSynced && (
         <p className="text-[9px] text-[hsl(var(--muted-foreground))]">Last synced: {lastSynced}</p>
