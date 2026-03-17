@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { X, TrendingUp, Award, Zap } from "lucide-react"
+import { useState, useEffect } from "react"
+import { X, Award, Zap, TrendingUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { Term } from "@/lib/store"
 
@@ -105,13 +105,42 @@ export function GradeCalculator({ activeTerm, onClose }: Props) {
   const [bonusAttendance, setBonusAttendance] = useState(false)
   const [bonusPractice, setBonusPractice] = useState(false)
 
-  const updateScore = (assIdx: number, value: string) => {
+  useEffect(() => {
+    fetch(`/api/user/grades?term=${encodeURIComponent(termKey)}`)
+      .then(r => r.json())
+      .then((data: { courseCode: string; assessmentIndex: number; score: number }[]) => {
+        if (!Array.isArray(data)) return
+        setCourses(prev => prev.map(c => ({
+          ...c,
+          assessments: c.assessments.map((a, ai) => {
+            const saved = data.find(d => d.courseCode === c.code && d.assessmentIndex === ai)
+            return saved ? { ...a, score: Number(saved.score) } : a
+          })
+        })))
+      })
+      .catch(console.error)
+  }, [termKey])
+
+  const updateScore = async (assIdx: number, value: string) => {
     const num = value === "" ? null : Math.min(100, Math.max(0, parseFloat(value)))
+    const finalNum = isNaN(num as number) ? null : num
     setCourses(prev => prev.map((c, ci) =>
       ci === activeTab
-        ? { ...c, assessments: c.assessments.map((a, ai) => ai === assIdx ? { ...a, score: isNaN(num as number) ? null : num } : a) }
+        ? { ...c, assessments: c.assessments.map((a, ai) => ai === assIdx ? { ...a, score: finalNum } : a) }
         : c
     ))
+    if (finalNum !== null) {
+      await fetch("/api/user/grades", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          term: termKey,
+          courseCode: courses[activeTab].code,
+          assessmentIndex: assIdx,
+          score: finalNum,
+        }),
+      })
+    }
   }
 
   const getCourseScore = (course: Course) => {
