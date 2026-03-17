@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { cn } from "@/lib/utils"
 import { GradeCalculator } from "@/components/dashboard/grade-calculator"
 import {
   initialAssessments,
