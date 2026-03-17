@@ -274,7 +274,7 @@ export function GradeCalculator({ activeTerm, onClose }: Props) {
             return (
               <div
                 key={course.code}
-                className="rounded-xl overflow-hidden"
+                className="rounded-xl overflow-hidden bg-[hsl(var(--background))]"
                 style={{ border: `1px solid ${course.color}44` }}
               >
                 {/* Course header */}
@@ -305,8 +305,7 @@ export function GradeCalculator({ activeTerm, onClose }: Props) {
                     return (
                       <div
                         key={ai}
-                        className="flex items-center gap-3 px-4 py-2.5"
-                        style={{ backgroundColor: "hsl(var(--card))" }}
+                        className="flex items-center gap-3 px-4 py-2.5 bg-[hsl(var(--background))]"
                       >
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium text-[hsl(var(--foreground))]">{ass.label}</p>
