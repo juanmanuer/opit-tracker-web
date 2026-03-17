@@ -211,9 +211,12 @@ export function GradeCalculator({ activeTerm, onClose }: Props) {
                 <p className="text-[10px] font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">Term average</p>
                 <div className="flex items-baseline gap-2 mt-0.5">
                   <span className="text-3xl font-bold text-[hsl(var(--primary))]">{avg.toFixed(1)}</span>
-                  <span className="text-sm text-[hsl(var(--muted-foreground))]/100">{getGrade(avg).letter}</span>
+                  <span className="text-sm text-[hsl(var(--muted-foreground))]">{getGrade(avg).letter}</span>
                   {(bonusAttendance || bonusPractice) && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[hsl(160,100%,50%)/0.15] text-[hsl(160,100%,50%)]">
+                    <span
+                      className="text-[10px] px-1.5 py-0.5 rounded-full"
+                      style={{ backgroundColor: "hsl(160,100%,50%,0.15)", color: "hsl(160,100%,50%)" }}
+                    >
                       +{(bonusAttendance ? 5 : 0) + (bonusPractice ? 5 : 0)} bonus
                     </span>
                   )}
@@ -236,9 +239,10 @@ export function GradeCalculator({ activeTerm, onClose }: Props) {
               className={cn(
                 "flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1.5 rounded-lg border transition-all",
                 bonusAttendance
-                  ? "border-[hsl(187,100%,50%)/0.4] bg-[hsl(187,100%,50%)/0.1] text-[hsl(187,100%,50%)]"
-                  : "border-border text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--primary)/0.3)]"
+                  ? "bg-[hsl(187,100%,50%,0.1)] text-[hsl(187,100%,50%)]"
+                  : "border-border text-[hsl(var(--muted-foreground))]"
               )}
+              style={bonusAttendance ? { borderColor: "hsl(187,100%,50%,0.4)" } : {}}
             >
               <Award className="h-3 w-3" />
               +5 Attendance
@@ -248,9 +252,10 @@ export function GradeCalculator({ activeTerm, onClose }: Props) {
               className={cn(
                 "flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1.5 rounded-lg border transition-all",
                 bonusPractice
-                  ? "border-[hsl(160,100%,50%)/0.4] bg-[hsl(160,100%,50%)/0.1] text-[hsl(160,100%,50%)]"
-                  : "border-border text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--primary)/0.3)]"
+                  ? "bg-[hsl(160,100%,50%,0.1)] text-[hsl(160,100%,50%)]"
+                  : "border-border text-[hsl(var(--muted-foreground))]"
               )}
+              style={bonusPractice ? { borderColor: "hsl(160,100%,50%,0.4)" } : {}}
             >
               <Award className="h-3 w-3" />
               +5 Practices
@@ -262,17 +267,20 @@ export function GradeCalculator({ activeTerm, onClose }: Props) {
             const total = getCourseTotal(course)
             const projected = getProjected(course)
             const display = total ?? projected
-            const grade = display !== null ? getGrade(Math.min(110, display + (bonusAttendance ? 5 : 0) + (bonusPractice ? 5 : 0))) : null
+            const grade = display !== null
+              ? getGrade(Math.min(110, display + (bonusAttendance ? 5 : 0) + (bonusPractice ? 5 : 0)))
+              : null
 
             return (
               <div
                 key={course.code}
-                className="rounded-xl border border-border overflow-hidden"
+                className="rounded-xl overflow-hidden"
+                style={{ border: `1px solid ${course.color}44` }}
               >
                 {/* Course header */}
                 <div
                   className="px-4 py-3 flex items-center justify-between"
-                  style={{ backgroundColor: course.color + "18", borderLeft: "3px solid " + course.color }}
+                  style={{ backgroundColor: course.color + "22", borderLeft: "3px solid " + course.color }}
                 >
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: course.color }}>
@@ -295,7 +303,11 @@ export function GradeCalculator({ activeTerm, onClose }: Props) {
                   {course.assessments.map((ass, ai) => {
                     const contribution = ass.score !== null ? (ass.score * ass.weight) / 100 : null
                     return (
-                      <div key={ai} className="flex items-center gap-3 px-4 py-2.5">
+                      <div
+                        key={ai}
+                        className="flex items-center gap-3 px-4 py-2.5"
+                        style={{ backgroundColor: "hsl(var(--card))" }}
+                      >
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium text-[hsl(var(--foreground))]">{ass.label}</p>
                           <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Weight: {ass.weight}%</p>
@@ -307,9 +319,14 @@ export function GradeCalculator({ activeTerm, onClose }: Props) {
                           value={ass.score ?? ""}
                           onChange={e => updateScore(ci, ai, e.target.value)}
                           placeholder="—"
-                          className="w-16 text-center text-xs bg-[hsl(var(--muted))] border border-border rounded-lg px-2 py-1.5 text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] outline-none focus:border-[hsl(var(--primary)/0.5)] transition-colors"
+                          className="w-16 text-center text-xs rounded-lg px-2 py-1.5 outline-none transition-colors"
+                          style={{
+                            backgroundColor: "hsl(var(--muted))",
+                            border: `1px solid ${course.color}44`,
+                            color: "hsl(var(--foreground))",
+                          }}
                         />
-                        <div className="w-16 text-right">
+                        <div className="w-16 text-right shrink-0">
                           {contribution !== null ? (
                             <p className="text-xs font-medium" style={{ color: course.color }}>
                               {contribution.toFixed(1)} pts
@@ -325,7 +342,7 @@ export function GradeCalculator({ activeTerm, onClose }: Props) {
 
                 {/* Progress bar */}
                 {display !== null && (
-                  <div className="px-4 py-2 bg-[hsl(var(--muted)/0.3)]">
+                  <div className="px-4 py-2" style={{ backgroundColor: course.color + "11" }}>
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-[9px] text-[hsl(var(--muted-foreground))]">
                         {total !== null ? "Actual score" : "Projected score"}
@@ -334,7 +351,7 @@ export function GradeCalculator({ activeTerm, onClose }: Props) {
                         {display.toFixed(1)} / 100
                       </span>
                     </div>
-                    <div className="h-1 rounded-full bg-[hsl(var(--border))]">
+                    <div className="h-1 rounded-full" style={{ backgroundColor: "hsl(var(--border))" }}>
                       <div
                         className="h-full rounded-full transition-all duration-500"
                         style={{ width: `${Math.min(100, display)}%`, backgroundColor: course.color }}
