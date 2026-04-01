@@ -137,17 +137,17 @@ export async function GET(req: Request) {
 
         // Upsert the new score
         await sql`
-          INSERT INTO grade_scores (id, email, term, course_code, score, assessment_index)
-          VALUES (
-            ${`${userEmail}-${term}-${result.courseCode}`},
-            ${userEmail},
-            ${term},
-            ${result.courseCode},
-            ${newScore},
-            ${0}
-          )
-          ON CONFLICT (id) DO UPDATE SET score = ${newScore}
-        `
+  INSERT INTO grade_scores (id, email, term, course_code, score, assessment_index)
+  VALUES (
+    ${`${userEmail}-${term}-${result.courseCode}`},
+    ${userEmail},
+    ${term},
+    ${result.courseCode},
+    ${newScore},
+    ${0}
+  )
+  ON CONFLICT (email, term, course_code, assessment_index) DO UPDATE SET score = ${newScore}
+`
       }
     }
 
