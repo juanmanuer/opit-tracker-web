@@ -25,8 +25,7 @@ export default function Page() {
 const [activeTerm, setActiveTerm] = useState<Term>("Term 2")
   const [activeSection, setActiveSection] = useState<SidebarSection>("assessments")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [mainView, setMainView] = useState<"kanban" | "calendar">("kanban")
-
+  const [mainView, setMainView] = useState<"kanban" | "calendar">("calendar")
   const sectionPanels: Record<SidebarSection, React.ReactNode> = {
   assessments: <AssessmentsPanel activeTerm={activeTerm} />,
   practices: <PracticesPanel activeTerm={activeTerm} />,

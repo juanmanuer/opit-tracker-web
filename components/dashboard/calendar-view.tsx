@@ -2,204 +2,289 @@
 
 import { useState, useMemo } from "react"
 import { cn } from "@/lib/utils"
-import { initialCalendarEvents, type CalendarEvent } from "@/lib/store"
-import { ChevronLeft, ChevronRight, Plus, X } from "lucide-react"
+import { ChevronLeft, ChevronRight, X } from "lucide-react"
+import { TERM_COURSES, type Term } from "@/lib/store"
 
-const eventTypeStyles: Record<string, { dot: string; bg: string }> = {
-  deadline: { dot: "bg-[hsl(var(--secondary))]", bg: "bg-[hsl(var(--secondary)/0.1)]" },
-  class: { dot: "bg-[hsl(var(--primary))]", bg: "bg-[hsl(var(--primary)/0.1)]" },
-  exam: { dot: "bg-[hsl(var(--destructive))]", bg: "bg-[hsl(var(--destructive)/0.15)]" },
-  meeting: { dot: "bg-[hsl(var(--neon-yellow))]", bg: "bg-[hsl(var(--neon-yellow)/0.1)]" },
+interface Assessment {
+  id: string
+  title: string
+  courseCode: string
+  courseName: string
+  color: string
+  startDate: string
+  endDate: string
+  weight: string
 }
 
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+const ASSESSMENTS: Assessment[] = [
+  // COMP-2001 Foundational Mathematics
+  { id: "2001-1", courseCode: "COMP-2001", courseName: "Foundational Mathematics", color: "#4F46E5", title: "Assessment 1", startDate: "2026-02-02", endDate: "2026-02-15", weight: "30%" },
+  { id: "2001-2", courseCode: "COMP-2001", courseName: "Foundational Mathematics", color: "#4F46E5", title: "Assessment 2", startDate: "2026-03-02", endDate: "2026-03-15", weight: "35%" },
+  { id: "2001-3", courseCode: "COMP-2001", courseName: "Foundational Mathematics", color: "#4F46E5", title: "Assessment 3", startDate: "2026-03-30", endDate: "2026-04-12", weight: "35%" },
+  // COMP-2002 Web Development
+  { id: "2002-1", courseCode: "COMP-2002", courseName: "Web Development",          color: "#059669", title: "Assessment 1", startDate: "2026-02-04", endDate: "2026-02-11", weight: "30%" },
+  { id: "2002-2", courseCode: "COMP-2002", courseName: "Web Development",          color: "#059669", title: "Assessment 2", startDate: "2026-03-18", endDate: "2026-03-25", weight: "40%" },
+  { id: "2002-3", courseCode: "COMP-2002", courseName: "Web Development",          color: "#059669", title: "Assessment 3", startDate: "2026-04-01", endDate: "2026-04-14", weight: "30%" },
+  // COMP-2003 Operating Systems
+  { id: "2003-1", courseCode: "COMP-2003", courseName: "Operating Systems",        color: "#DC2626", title: "Assessment 1", startDate: "2026-02-06", endDate: "2026-02-22", weight: "40%" },
+  { id: "2003-2", courseCode: "COMP-2003", courseName: "Operating Systems",        color: "#DC2626", title: "Assessment 2", startDate: "2026-03-06", endDate: "2026-03-22", weight: "10%" },
+  { id: "2003-3", courseCode: "COMP-2003", courseName: "Operating Systems",        color: "#DC2626", title: "Assessment 3", startDate: "2026-03-27", endDate: "2026-04-12", weight: "40%" },
+  { id: "2003-4", courseCode: "COMP-2003", courseName: "Operating Systems",        color: "#DC2626", title: "Assessment 4", startDate: "2026-04-03", endDate: "2026-04-12", weight: "10%" },
+  // COMP-2004 Data Structures & Algorithms
+  { id: "2004-1", courseCode: "COMP-2004", courseName: "Data Structures & Algorithms", color: "#D97706", title: "Assessment 1", startDate: "2026-02-07", endDate: "2026-02-14", weight: "35%" },
+  { id: "2004-2", courseCode: "COMP-2004", courseName: "Data Structures & Algorithms", color: "#D97706", title: "Assessment 2", startDate: "2026-03-07", endDate: "2026-03-14", weight: "35%" },
+  { id: "2004-3", courseCode: "COMP-2004", courseName: "Data Structures & Algorithms", color: "#D97706", title: "Assessment 3", startDate: "2026-03-28", endDate: "2026-04-12", weight: "30%" },
+  // COMP-2005 Project Management & QA
+  { id: "2005-1", courseCode: "COMP-2005", courseName: "Project Management & QA", color: "#7C3AED", title: "Assessment 1", startDate: "2026-03-04", endDate: "2026-03-22", weight: "50%" },
+  { id: "2005-2", courseCode: "COMP-2005", courseName: "Project Management & QA", color: "#7C3AED", title: "Assessment 2", startDate: "2026-03-25", endDate: "2026-04-12", weight: "50%" },
+]
+
+const COURSE_ORDER = ["COMP-2001", "COMP-2002", "COMP-2003", "COMP-2004", "COMP-2005"]
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+function getDaysInMonth(year: number, month: number) {
+  return new Date(year, month + 1, 0).getDate()
+}
+
+function getFirstDayOfMonth(year: number, month: number) {
+  const day = new Date(year, month, 1).getDay()
+  return day === 0 ? 6 : day - 1 // Monday-first
+}
+
+function dateToStr(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+}
 
 export function CalendarView() {
-  const [events, setEvents] = useState<CalendarEvent[]>(initialCalendarEvents)
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 1, 1)) // Feb 2026
-  const [selectedDate, setSelectedDate] = useState<string | null>(null)
-  const [addingEvent, setAddingEvent] = useState(false)
-  const [newEventTitle, setNewEventTitle] = useState("")
+  const today = new Date()
+  const [currentDate, setCurrentDate] = useState(new Date(2026, 1, 1))
+  const [selected, setSelected] = useState<Assessment | null>(null)
 
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
   const monthName = currentDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })
+  const daysInMonth = getDaysInMonth(year, month)
+  const firstDay = getFirstDayOfMonth(year, month)
+  const todayStr = dateToStr(today)
 
-  const calendarDays = useMemo(() => {
-    const firstDay = new Date(year, month, 1).getDay()
-    const daysInMonth = new Date(year, month + 1, 0).getDate()
-    const days: (number | null)[] = []
-    for (let i = 0; i < firstDay; i++) days.push(null)
-    for (let d = 1; d <= daysInMonth; d++) days.push(d)
-    return days
-  }, [year, month])
+  // Build grid: 7 cols, enough rows
+  const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7
+  const cells: (number | null)[] = [
+    ...Array(firstDay).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+    ...Array(totalCells - firstDay - daysInMonth).fill(null),
+  ]
+  const weeks = []
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
 
-  const getEventsForDay = (day: number) => {
+  // For a given day, get assessments that span it
+  function getAssessmentsForDay(day: number): Assessment[] {
     const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
-    return events.filter((e) => e.date === dateStr)
+    return ASSESSMENTS.filter(a => a.startDate <= dateStr && a.endDate >= dateStr)
   }
 
-  const selectedEvents = selectedDate ? events.filter((e) => e.date === selectedDate) : []
-
-  const handleAddEvent = () => {
-    if (!newEventTitle.trim() || !selectedDate) return
-    const newEvent: CalendarEvent = {
-      id: `e${Date.now()}`,
-      title: newEventTitle.trim(),
-      date: selectedDate,
-      type: "deadline",
-    }
-    setEvents((prev) => [...prev, newEvent])
-    setNewEventTitle("")
-    setAddingEvent(false)
+  // For a given day + assessment, determine bar segment type
+  function getBarType(day: number, a: Assessment): "start" | "end" | "middle" | "single" {
+    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+    const isStart = a.startDate === dateStr
+    const isEnd = a.endDate === dateStr
+    if (isStart && isEnd) return "single"
+    if (isStart) return "start"
+    if (isEnd) return "end"
+    return "middle"
   }
 
-  const handleRemoveEvent = (eventId: string) => {
-    setEvents((prev) => prev.filter((e) => e.id !== eventId))
+  function isDeadline(day: number, a: Assessment): boolean {
+    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+    return a.endDate === dateStr
   }
 
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1))
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1))
 
-  const today = new Date()
-  const isToday = (day: number) =>
-    day === today.getDate() && month === today.getMonth() && year === today.getFullYear()
+  // Legend
+  const activeCourses = COURSE_ORDER.map(code => ASSESSMENTS.find(a => a.courseCode === code)).filter(Boolean)
+  const seen = new Set<string>()
+  const legend = ASSESSMENTS.filter(a => {
+    if (seen.has(a.courseCode)) return false
+    seen.add(a.courseCode)
+    return true
+  })
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full gap-3">
+
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <button onClick={prevMonth} className="p-1 rounded-md text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] transition-colors" aria-label="Previous month">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <button onClick={prevMonth} className="p-1.5 rounded-md text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] transition-colors">
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">{monthName}</h3>
-          <button onClick={nextMonth} className="p-1 rounded-md text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] transition-colors" aria-label="Next month">
+          <h3 className="text-base font-bold text-[hsl(var(--foreground))] min-w-[140px] text-center">{monthName}</h3>
+          <button onClick={nextMonth} className="p-1.5 rounded-md text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] transition-colors">
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
-        <div className="flex items-center gap-3">
-          {Object.entries(eventTypeStyles).map(([type, s]) => (
-            <div key={type} className="flex items-center gap-1.5">
-              <span className={cn("h-2 w-2 rounded-full", s.dot)} />
-              <span className="text-[10px] text-[hsl(var(--muted-foreground))] capitalize">{type}</span>
+
+        {/* Legend */}
+        <div className="flex items-center gap-3 flex-wrap justify-end">
+          {legend.map(a => (
+            <div key={a.courseCode} className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-sm shrink-0" style={{ backgroundColor: a.color }} />
+              <span className="text-[10px] text-[hsl(var(--muted-foreground))]">{a.courseName}</span>
             </div>
           ))}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px]">📌</span>
+            <span className="text-[10px] text-[hsl(var(--muted-foreground))]">Deadline</span>
+          </div>
         </div>
       </div>
 
       {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-px rounded-lg overflow-hidden border border-border bg-border flex-1">
-        {/* Day headers */}
-        {DAYS.map((day) => (
-          <div key={day} className="bg-[hsl(var(--muted))] py-2 text-center">
-            <span className="text-[10px] font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">{day}</span>
-          </div>
-        ))}
-        {/* Day cells */}
-        {calendarDays.map((day, i) => {
-          const dayEvents = day ? getEventsForDay(day) : []
-          const dateStr = day ? `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}` : null
-          const isSelected = dateStr === selectedDate
-          return (
-            <button
-              key={i}
-              onClick={() => dateStr && setSelectedDate(isSelected ? null : dateStr)}
-              disabled={!day}
-              className={cn(
-                "bg-[hsl(var(--card))] p-1.5 text-left transition-colors min-h-[72px] flex flex-col",
-                day && "hover:bg-[hsl(var(--muted)/0.5)] cursor-pointer",
-                isSelected && "bg-[hsl(var(--primary)/0.08)] ring-1 ring-[hsl(var(--primary)/0.3)]",
-                !day && "bg-[hsl(var(--background))]"
-              )}
-            >
-              {day && (
-                <>
-                  <span
-                    className={cn(
-                      "text-[11px] font-medium",
-                      isToday(day)
-                        ? "h-5 w-5 rounded-full bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] flex items-center justify-center text-[10px]"
-                        : "text-[hsl(var(--muted-foreground))]"
-                    )}
-                  >
-                    {day}
-                  </span>
-                  <div className="flex flex-col gap-0.5 mt-1 flex-1">
-                    {dayEvents.slice(0, 2).map((evt) => {
-                      const style = eventTypeStyles[evt.type]
-                      return (
-                        <div key={evt.id} className={cn("flex items-center gap-1 rounded px-1 py-0.5", style.bg)}>
-                          <span className={cn("h-1 w-1 rounded-full shrink-0", style.dot)} />
-                          <span className="text-[8px] text-[hsl(var(--foreground))] truncate">{evt.title}</span>
+      <div className="flex-1 min-h-0 overflow-auto rounded-xl border border-border">
+        <table className="w-full border-collapse table-fixed">
+          <thead>
+            <tr>
+              {DAYS.map(d => (
+                <th key={d} className="bg-[hsl(var(--muted))] py-2 text-center text-[10px] font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider border-b border-border">
+                  {d}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {weeks.map((week, wi) => (
+              <tr key={wi}>
+                {week.map((day, di) => {
+                  const dateStr = day ? `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}` : null
+                  const isToday = dateStr === todayStr
+                  const dayAssessments = day ? getAssessmentsForDay(day) : []
+
+                  // Sort by COURSE_ORDER for consistent row placement
+                  const sorted = [...dayAssessments].sort((a, b) =>
+                    COURSE_ORDER.indexOf(a.courseCode) - COURSE_ORDER.indexOf(b.courseCode)
+                  )
+
+                  return (
+                    <td
+                      key={di}
+                      className={cn(
+                        "border border-border align-top p-0 h-24",
+                        day ? "bg-[hsl(var(--card))]" : "bg-[hsl(var(--background))]",
+                        isToday && "ring-2 ring-inset ring-[hsl(var(--primary)/0.5)]"
+                      )}
+                    >
+                      {day && (
+                        <div className="flex flex-col h-full">
+                          {/* Day number */}
+                          <div className="px-2 pt-1.5 pb-1">
+                            <span className={cn(
+                              "text-[11px] font-semibold",
+                              isToday
+                                ? "inline-flex h-5 w-5 items-center justify-center rounded-full bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-[10px]"
+                                : "text-[hsl(var(--muted-foreground))]"
+                            )}>
+                              {day}
+                            </span>
+                          </div>
+
+                          {/* Assessment bars */}
+                          <div className="flex flex-col gap-0.5 px-0 pb-1 flex-1">
+                            {sorted.map(a => {
+                              const type = getBarType(day, a)
+                              const deadline = isDeadline(day, a)
+                              return (
+                                <button
+                                  key={a.id}
+                                  onClick={() => setSelected(selected?.id === a.id ? null : a)}
+                                  className={cn(
+                                    "flex items-center gap-1 text-left w-full transition-all hover:brightness-110 active:scale-95",
+                                    type === "start" && "rounded-l-full pl-2 pr-0 ml-1",
+                                    type === "end" && "rounded-r-full pl-1 pr-2 mr-1",
+                                    type === "middle" && "pl-1 pr-1",
+                                    type === "single" && "rounded-full pl-2 pr-2 mx-1",
+                                  )}
+                                  style={{
+                                    backgroundColor: a.color + "33",
+                                    borderTop: `2px solid ${a.color}`,
+                                    borderBottom: `2px solid ${a.color}`,
+                                    borderLeft: (type === "start" || type === "single") ? `2px solid ${a.color}` : "none",
+                                    borderRight: (type === "end" || type === "single") ? `2px solid ${a.color}` : "none",
+                                    minHeight: "18px",
+                                  }}
+                                >
+                                  {(type === "start" || type === "single") && (
+                                    <span
+                                      className="text-[8px] font-bold truncate leading-none py-0.5"
+                                      style={{ color: a.color }}
+                                    >
+                                      {a.courseName.split(" ")[0]} · {a.title.replace("Assessment ", "A")} · {a.weight}
+                                    </span>
+                                  )}
+                                  {deadline && (
+                                    <span className="ml-auto shrink-0 text-[10px]">📌</span>
+                                  )}
+                                </button>
+                              )
+                            })}
+                          </div>
                         </div>
-                      )
-                    })}
-                    {dayEvents.length > 2 && (
-                      <span className="text-[8px] text-[hsl(var(--muted-foreground))] pl-1">+{dayEvents.length - 2} more</span>
-                    )}
-                  </div>
-                </>
-              )}
-            </button>
-          )
-        })}
+                      )}
+                    </td>
+                  )
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
-      {/* Selected date events */}
-      {selectedDate && (
-        <div className="mt-3 rounded-lg border border-border bg-[hsl(var(--card))] p-3">
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="text-xs font-semibold text-[hsl(var(--foreground))]">
-              Events for {new Date(selectedDate + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-            </h4>
-            <button
-              onClick={() => setAddingEvent(true)}
-              className="text-[hsl(var(--primary))] hover:opacity-80 transition-opacity"
-              aria-label="Add event"
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </button>
-          </div>
-          {selectedEvents.length === 0 && !addingEvent && (
-            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">No events. Click + to add one.</p>
-          )}
-          <div className="flex flex-col gap-1.5">
-            {selectedEvents.map((evt) => {
-              const style = eventTypeStyles[evt.type]
-              return (
-                <div key={evt.id} className="flex items-center justify-between group">
-                  <div className="flex items-center gap-2">
-                    <span className={cn("h-2 w-2 rounded-full", style.dot)} />
-                    <span className="text-[11px] text-[hsl(var(--foreground))]">{evt.title}</span>
-                    {evt.time && <span className="text-[10px] text-[hsl(var(--muted-foreground))]">{evt.time}</span>}
-                  </div>
-                  <button
-                    onClick={() => handleRemoveEvent(evt.id)}
-                    className="opacity-0 group-hover:opacity-100 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))] transition-all"
-                    aria-label={`Remove ${evt.title}`}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              )
-            })}
-            {addingEvent && (
-              <div className="flex items-center gap-2 mt-1">
-                <input
-                  type="text"
-                  value={newEventTitle}
-                  onChange={(e) => setNewEventTitle(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleAddEvent()}
-                  placeholder="Event title..."
-                  className="flex-1 bg-transparent text-[11px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] outline-none border-b border-[hsl(var(--primary)/0.3)] pb-0.5"
-                  autoFocus
-                />
-                <button onClick={handleAddEvent} className="text-[10px] text-[hsl(var(--primary))] font-medium">Add</button>
-                <button onClick={() => { setAddingEvent(false); setNewEventTitle("") }} className="text-[10px] text-[hsl(var(--muted-foreground))]">Cancel</button>
+      {/* Detail popup */}
+      {selected && (
+        <div
+          className="rounded-xl border p-4 flex items-start justify-between gap-4 animate-in fade-in slide-in-from-bottom-2 duration-200"
+          style={{
+            backgroundColor: selected.color + "18",
+            borderColor: selected.color + "55",
+          }}
+        >
+          <div className="flex items-start gap-3">
+            <span
+              className="mt-0.5 h-3 w-3 rounded-sm shrink-0"
+              style={{ backgroundColor: selected.color }}
+            />
+            <div>
+              <p className="text-xs font-bold" style={{ color: selected.color }}>
+                {selected.courseCode} · {selected.courseName}
+              </p>
+              <p className="text-sm font-semibold text-[hsl(var(--foreground))] mt-0.5">
+                {selected.title}
+              </p>
+              <div className="flex items-center gap-4 mt-1.5">
+                <span className="text-[10px] text-[hsl(var(--muted-foreground))]">
+                  📅 {new Date(selected.startDate + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                  {" → "}
+                  {new Date(selected.endDate + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                </span>
+                <span
+                  className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                  style={{ backgroundColor: selected.color + "33", color: selected.color }}
+                >
+                  {selected.weight}
+                </span>
+                <span className="text-[10px] text-[hsl(var(--muted-foreground))]">
+                  📌 Deadline: {new Date(selected.endDate + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long" })}
+                </span>
               </div>
-            )}
+            </div>
           </div>
+          <button
+            onClick={() => setSelected(null)}
+            className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors shrink-0"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
       )}
     </div>
