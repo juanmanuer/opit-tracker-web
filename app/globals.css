@@ -9,7 +9,9 @@
 }
 
 @layer base {
-  :root {
+  /* ── DARK MODE (default) ─────────────────────────────── */
+  :root,
+  .dark {
     --background: 240 20% 4%;
     --foreground: 220 10% 93%;
     --card: 240 15% 8%;
@@ -48,6 +50,46 @@
     --neon-green: 160 100% 50%;
     --neon-yellow: 45 100% 60%;
   }
+
+  /* ── LIGHT MODE ──────────────────────────────────────── */
+  .light {
+    --background: 210 20% 97%;
+    --foreground: 240 15% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 15% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 15% 12%;
+    --primary: 187 70% 38%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 310 60% 50%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 210 15% 92%;
+    --muted-foreground: 240 8% 42%;
+    --accent: 187 50% 90%;
+    --accent-foreground: 187 70% 25%;
+    --destructive: 0 75% 50%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 220 13% 86%;
+    --input: 220 13% 86%;
+    --ring: 187 70% 38%;
+    --chart-1: 187 70% 38%;
+    --chart-2: 310 60% 50%;
+    --chart-3: 160 50% 38%;
+    --chart-4: 45 80% 48%;
+    --chart-5: 270 55% 52%;
+    --sidebar-background: 210 18% 94%;
+    --sidebar-foreground: 240 12% 20%;
+    --sidebar-primary: 187 70% 38%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 15% 88%;
+    --sidebar-accent-foreground: 240 15% 12%;
+    --sidebar-border: 220 13% 84%;
+    --sidebar-ring: 187 70% 38%;
+    --neon-cyan: 187 70% 38%;
+    --neon-pink: 310 60% 50%;
+    --neon-green: 160 60% 35%;
+    --neon-yellow: 45 80% 42%;
+  }
 }
 
 @layer base {
@@ -59,32 +101,30 @@
   }
 }
 
-/* Custom scrollbar for dark theme */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: hsl(240 15% 8%);
-}
-::-webkit-scrollbar-thumb {
-  background: hsl(240 10% 20%);
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: hsl(187 100% 50% / 0.4);
-}
+/* Custom scrollbar — dark */
+.dark ::-webkit-scrollbar { width: 6px; height: 6px; }
+.dark ::-webkit-scrollbar-track { background: hsl(240 15% 8%); }
+.dark ::-webkit-scrollbar-thumb { background: hsl(240 10% 20%); border-radius: 3px; }
+.dark ::-webkit-scrollbar-thumb:hover { background: hsl(187 100% 50% / 0.4); }
 
-/* Neon glow utilities */
-.neon-glow-cyan {
+/* Custom scrollbar — light */
+.light ::-webkit-scrollbar { width: 6px; height: 6px; }
+.light ::-webkit-scrollbar-track { background: hsl(210 15% 92%); }
+.light ::-webkit-scrollbar-thumb { background: hsl(220 13% 75%); border-radius: 3px; }
+.light ::-webkit-scrollbar-thumb:hover { background: hsl(187 70% 38% / 0.5); }
+
+/* Neon glow utilities — dark */
+.dark .neon-glow-cyan {
   box-shadow: 0 0 8px hsl(187 100% 50% / 0.3), 0 0 20px hsl(187 100% 50% / 0.1);
 }
-.neon-glow-pink {
+.dark .neon-glow-pink {
   box-shadow: 0 0 8px hsl(310 100% 64% / 0.3), 0 0 20px hsl(310 100% 64% / 0.1);
 }
-.neon-text-cyan {
-  text-shadow: 0 0 10px hsl(187 100% 50% / 0.5);
-}
-.neon-text-pink {
-  text-shadow: 0 0 10px hsl(310 100% 64% / 0.5);
-}
+.dark .neon-text-cyan { text-shadow: 0 0 10px hsl(187 100% 50% / 0.5); }
+.dark .neon-text-pink { text-shadow: 0 0 10px hsl(310 100% 64% / 0.5); }
+
+/* Neon glow utilities — light (toned down, no glow needed) */
+.light .neon-glow-cyan { box-shadow: 0 0 0 1px hsl(187 70% 38% / 0.3); }
+.light .neon-glow-pink { box-shadow: 0 0 0 1px hsl(310 60% 50% / 0.3); }
+.light .neon-text-cyan { text-shadow: none; }
+.light .neon-text-pink { text-shadow: none; }
