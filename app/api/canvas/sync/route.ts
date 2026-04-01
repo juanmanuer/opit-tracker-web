@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
+import { sql } from "@/lib/db"
+import { gradeChangeEmailHtml } from "@/lib/email"
 
 const CANVAS_DOMAIN = process.env.CANVAS_DOMAIN
 const CANVAS_TOKEN = process.env.CANVAS_TOKEN
@@ -30,11 +32,39 @@ async function canvasFetch(path: string) {
   return res.json()
 }
 
+async function sendGradeNotification(
+  email: string,
+  changes: { courseCode: string; courseName: string; oldScore: number | null; newScore: number }[]
+) {
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: "onboarding@resend.dev",
+        to: email,
+        subject: `📊 OPIT Tracker — ${changes.length} grade${changes.length > 1 ? "s" : ""} updated`,
+        html: gradeChangeEmailHtml(changes),
+      }),
+    })
+    if (!res.ok) {
+      const err = await res.text()
+      console.error("Resend error:", err)
+    }
+  } catch (err) {
+    console.error("Failed to send grade notification:", err)
+  }
+}
+
 export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.email) return NextResponse.json({}, { status: 401 })
 
+    const userEmail = session.user.email
     const { searchParams } = new URL(req.url)
     const term = searchParams.get("term") ?? "Term 2"
     const courses = TERM_COURSES[term] ?? TERM_COURSES["Term 2"]
@@ -72,6 +102,59 @@ export async function GET(req: Request) {
         }
       })
     )
+
+    // ── Check for grade changes and send notification ──────────────────
+    const changes: {
+      courseCode: string
+      courseName: string
+      oldScore: number | null
+      newScore: number
+    }[] = []
+
+    for (const result of results) {
+      const newScore = result.gradeInfo?.currentScore
+      if (newScore === null || newScore === undefined) continue
+
+      // Get previously stored score
+      const existing = await sql`
+        SELECT score FROM grade_scores
+        WHERE email = ${userEmail}
+          AND term = ${term}
+          AND course_code = ${result.courseCode}
+        LIMIT 1
+      `
+
+      const oldScore = existing.length > 0 ? Number(existing[0].score) : null
+
+      // If score changed (or is new), record it
+      if (oldScore !== newScore) {
+        changes.push({
+          courseCode: result.courseCode,
+          courseName: result.courseName,
+          oldScore,
+          newScore,
+        })
+
+        // Upsert the new score
+        await sql`
+          INSERT INTO grade_scores (id, email, term, course_code, score, assessment_index)
+          VALUES (
+            ${`${userEmail}-${term}-${result.courseCode}`},
+            ${userEmail},
+            ${term},
+            ${result.courseCode},
+            ${newScore},
+            ${0}
+          )
+          ON CONFLICT (id) DO UPDATE SET score = ${newScore}
+        `
+      }
+    }
+
+    // Send email if anything changed
+    if (changes.length > 0) {
+      await sendGradeNotification(userEmail, changes)
+    }
 
     return NextResponse.json(results)
   } catch (error) {
