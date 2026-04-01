@@ -2,9 +2,11 @@
 
 import { cn } from "@/lib/utils"
 import { TERMS, type Term } from "@/lib/store"
-import { Bell, Search, User, LogOut } from "lucide-react"
+import { Bell, Search, User, LogOut, Sun, Moon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { signOut } from "next-auth/react"
+import { useTheme } from "next-themes"
+import { useEffect, useState } from "react"
 
 interface TopNavProps {
   activeTerm: Term
@@ -13,8 +15,18 @@ interface TopNavProps {
 
 export function TopNav({ activeTerm, onTermChange }: TopNavProps) {
   const router = useRouter()
-async function handleLogout() {
+  const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  // Avoid hydration mismatch — only render toggle after mount
+  useEffect(() => { setMounted(true) }, [])
+
+  async function handleLogout() {
     await signOut({ callbackUrl: "/login" })
+  }
+
+  function toggleTheme() {
+    setTheme(theme === "dark" ? "light" : "dark")
   }
 
   return (
@@ -41,6 +53,23 @@ async function handleLogout() {
 
       {/* Right side */}
       <div className="flex items-center gap-3">
+
+        {/* Dark/Light toggle */}
+        {mounted && (
+          <button
+            onClick={toggleTheme}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] transition-colors"
+            aria-label="Toggle theme"
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {theme === "dark" ? (
+              <Sun className="h-4 w-4" />
+            ) : (
+              <Moon className="h-4 w-4" />
+            )}
+          </button>
+        )}
+
         <button className="flex h-8 w-8 items-center justify-center rounded-lg text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] transition-colors" aria-label="Search">
           <Search className="h-4 w-4" />
         </button>
@@ -48,19 +77,21 @@ async function handleLogout() {
           <Bell className="h-4 w-4" />
           <span className="absolute top-1 right-1.5 h-2 w-2 rounded-full bg-[hsl(var(--secondary))]" />
         </button>
-<div className="flex items-center gap-2">
-  <div className="h-8 w-8 rounded-full bg-[hsl(var(--primary)/0.15)] flex items-center justify-center">
-    <User className="h-4 w-4 text-[hsl(var(--primary))]" />
-  </div>
-  <button
-    onClick={handleLogout}
-    className="flex h-8 w-8 items-center justify-center rounded-lg text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-red-400 transition-colors"
-    aria-label="Log out"
-    title="Log out"
-  >
-    <LogOut className="h-4 w-4" />
-  </button>
-</div>      </div>
+
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-8 rounded-full bg-[hsl(var(--primary)/0.15)] flex items-center justify-center">
+            <User className="h-4 w-4 text-[hsl(var(--primary))]" />
+          </div>
+          <button
+            onClick={handleLogout}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-red-400 transition-colors"
+            aria-label="Log out"
+            title="Log out"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
     </header>
   )
 }
