@@ -57,9 +57,8 @@ function dateToStr(date: Date) {
 
 export function CalendarView() {
   const today = new Date()
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 1, 1))
+  const [currentDate, setCurrentDate] = useState(new Date()) 
   const [selected, setSelected] = useState<Assessment | null>(null)
-
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
   const monthName = currentDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })
