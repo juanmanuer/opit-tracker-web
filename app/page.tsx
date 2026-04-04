@@ -8,23 +8,25 @@ import { TopNav } from "@/components/dashboard/top-nav"
 import { KanbanBoard } from "@/components/dashboard/kanban-board"
 import { CalendarView } from "@/components/dashboard/calendar-view"
 import { ProgressDashboard } from "@/components/dashboard/progress-dashboard"
+import { MobileLayout } from "@/components/dashboard/mobile-layout"
+import { useMobile } from "@/hooks/use-mobile"
 import {
-  AssessmentsPanel,
-  PracticesPanel,
-  GradesPanel,
-  MiscPanel,
-  AttendancePanel,
-  CoursesPanel,
+  AssessmentsPanel, PracticesPanel, GradesPanel,
+  MiscPanel, AttendancePanel, CoursesPanel,
 } from "@/components/dashboard/section-panels"
 import type { Term, SidebarSection } from "@/lib/store"
 import { LayoutGrid, Calendar, BarChart2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export default function Page() {
+  const isMobile = useMobile()
   const [activeTerm, setActiveTerm] = useState<Term>("Term 2")
   const [activeSection, setActiveSection] = useState<SidebarSection>("assessments")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mainView, setMainView] = useState<"dashboard" | "kanban" | "calendar">("dashboard")
+
+  // Render mobile layout on small screens
+  if (isMobile) return <MobileLayout />
 
   const sectionPanels: Record<SidebarSection, React.ReactNode> = {
     assessments: <AssessmentsPanel activeTerm={activeTerm} />,
@@ -60,12 +62,10 @@ export default function Page() {
         <TopNav activeTerm={activeTerm} onTermChange={setActiveTerm} />
 
         <div className="flex-1 flex min-h-0 overflow-hidden">
-          {/* Section detail panel */}
           <div className="w-80 shrink-0 border-r border-border bg-[hsl(var(--background))] p-4 overflow-y-auto">
             {sectionPanels[activeSection]}
           </div>
 
-          {/* Main content */}
           <main className="flex-1 flex flex-col min-w-0 p-5 overflow-hidden">
             <div className="flex items-center justify-between mb-4">
               <div>
