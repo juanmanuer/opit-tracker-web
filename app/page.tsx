@@ -9,7 +9,7 @@ import { KanbanBoard } from "@/components/dashboard/kanban-board"
 import { CalendarView } from "@/components/dashboard/calendar-view"
 import { ProgressDashboard } from "@/components/dashboard/progress-dashboard"
 import { MobileLayout } from "@/components/dashboard/mobile-layout"
-import { useMobile } from "@/hooks/use-mobile"
+import { useIsMobile } from "@/hooks/use-mobile"
 import {
   AssessmentsPanel, PracticesPanel, GradesPanel,
   MiscPanel, AttendancePanel, CoursesPanel,
@@ -19,7 +19,7 @@ import { LayoutGrid, Calendar, BarChart2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export default function Page() {
-  const isMobile = useMobile()
+  const isMobile = useIsMobile()
   const [activeTerm, setActiveTerm] = useState<Term>("Term 2")
   const [activeSection, setActiveSection] = useState<SidebarSection>("assessments")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
