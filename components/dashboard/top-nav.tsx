@@ -1,5 +1,6 @@
 "use client"
 
+import { ExportButton } from "@/components/dashboard/export-button"
 import { cn } from "@/lib/utils"
 import { TERMS, initialAssessments, type Term } from "@/lib/store"
 import { Bell, Search, LogOut, Sun, Moon, X, Trophy, Calendar, BookOpen } from "lucide-react"
@@ -349,15 +350,18 @@ export function TopNav({ activeTerm, onTermChange }: TopNavProps) {
           )}
         </div>
 
-        {/* Logout button (standalone) */}
-        <button
-          onClick={handleLogout}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-red-400 transition-colors"
-          aria-label="Log out"
-          title="Log out"
-        >
-          <LogOut className="h-4 w-4" />
-        </button>
+{/* Export */}
+<ExportButton activeTerm={activeTerm} />
+
+{/* Logout button (standalone) */}
+<button
+  onClick={handleLogout}
+  className="flex h-8 w-8 items-center justify-center rounded-lg text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-red-400 transition-colors"
+  aria-label="Log out"
+  title="Log out"
+>
+  <LogOut className="h-4 w-4" />
+</button>
 
       </div>
     </header>
