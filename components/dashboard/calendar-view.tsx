@@ -1,9 +1,8 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { ChevronLeft, ChevronRight, X } from "lucide-react"
-import { TERM_COURSES, type Term } from "@/lib/store"
 
 interface Assessment {
   id: string
@@ -17,26 +16,21 @@ interface Assessment {
 }
 
 const ASSESSMENTS: Assessment[] = [
-  // COMP-2001 Foundational Mathematics
-  { id: "2001-1", courseCode: "COMP-2001", courseName: "Foundational Mathematics", color: "#4F46E5", title: "Assessment 1", startDate: "2026-02-02", endDate: "2026-02-15", weight: "30%" },
-  { id: "2001-2", courseCode: "COMP-2001", courseName: "Foundational Mathematics", color: "#4F46E5", title: "Assessment 2", startDate: "2026-03-02", endDate: "2026-03-15", weight: "35%" },
-  { id: "2001-3", courseCode: "COMP-2001", courseName: "Foundational Mathematics", color: "#4F46E5", title: "Assessment 3", startDate: "2026-03-30", endDate: "2026-04-12", weight: "35%" },
-  // COMP-2002 Web Development
-  { id: "2002-1", courseCode: "COMP-2002", courseName: "Web Development",          color: "#059669", title: "Assessment 1", startDate: "2026-02-04", endDate: "2026-02-11", weight: "30%" },
-  { id: "2002-2", courseCode: "COMP-2002", courseName: "Web Development",          color: "#059669", title: "Assessment 2", startDate: "2026-03-18", endDate: "2026-03-25", weight: "40%" },
-  { id: "2002-3", courseCode: "COMP-2002", courseName: "Web Development",          color: "#059669", title: "Assessment 3", startDate: "2026-04-01", endDate: "2026-04-14", weight: "30%" },
-  // COMP-2003 Operating Systems
-  { id: "2003-1", courseCode: "COMP-2003", courseName: "Operating Systems",        color: "#DC2626", title: "Assessment 1", startDate: "2026-02-06", endDate: "2026-02-22", weight: "40%" },
-  { id: "2003-2", courseCode: "COMP-2003", courseName: "Operating Systems",        color: "#DC2626", title: "Assessment 2", startDate: "2026-03-06", endDate: "2026-03-22", weight: "10%" },
-  { id: "2003-3", courseCode: "COMP-2003", courseName: "Operating Systems",        color: "#DC2626", title: "Assessment 3", startDate: "2026-03-27", endDate: "2026-04-12", weight: "40%" },
-  { id: "2003-4", courseCode: "COMP-2003", courseName: "Operating Systems",        color: "#DC2626", title: "Assessment 4", startDate: "2026-04-03", endDate: "2026-04-12", weight: "10%" },
-  // COMP-2004 Data Structures & Algorithms
+  { id: "2001-1", courseCode: "COMP-2001", courseName: "Foundational Mathematics",     color: "#4F46E5", title: "Assessment 1", startDate: "2026-02-02", endDate: "2026-02-15", weight: "30%" },
+  { id: "2001-2", courseCode: "COMP-2001", courseName: "Foundational Mathematics",     color: "#4F46E5", title: "Assessment 2", startDate: "2026-03-02", endDate: "2026-03-15", weight: "35%" },
+  { id: "2001-3", courseCode: "COMP-2001", courseName: "Foundational Mathematics",     color: "#4F46E5", title: "Assessment 3", startDate: "2026-03-30", endDate: "2026-04-12", weight: "35%" },
+  { id: "2002-1", courseCode: "COMP-2002", courseName: "Web Development",              color: "#059669", title: "Assessment 1", startDate: "2026-02-04", endDate: "2026-02-11", weight: "30%" },
+  { id: "2002-2", courseCode: "COMP-2002", courseName: "Web Development",              color: "#059669", title: "Assessment 2", startDate: "2026-03-18", endDate: "2026-03-25", weight: "40%" },
+  { id: "2002-3", courseCode: "COMP-2002", courseName: "Web Development",              color: "#059669", title: "Assessment 3", startDate: "2026-04-01", endDate: "2026-04-14", weight: "30%" },
+  { id: "2003-1", courseCode: "COMP-2003", courseName: "Operating Systems",            color: "#DC2626", title: "Assessment 1", startDate: "2026-02-06", endDate: "2026-02-22", weight: "40%" },
+  { id: "2003-2", courseCode: "COMP-2003", courseName: "Operating Systems",            color: "#DC2626", title: "Assessment 2", startDate: "2026-03-06", endDate: "2026-03-22", weight: "10%" },
+  { id: "2003-3", courseCode: "COMP-2003", courseName: "Operating Systems",            color: "#DC2626", title: "Assessment 3", startDate: "2026-03-27", endDate: "2026-04-12", weight: "40%" },
+  { id: "2003-4", courseCode: "COMP-2003", courseName: "Operating Systems",            color: "#DC2626", title: "Assessment 4", startDate: "2026-04-03", endDate: "2026-04-12", weight: "10%" },
   { id: "2004-1", courseCode: "COMP-2004", courseName: "Data Structures & Algorithms", color: "#D97706", title: "Assessment 1", startDate: "2026-02-07", endDate: "2026-02-14", weight: "35%" },
   { id: "2004-2", courseCode: "COMP-2004", courseName: "Data Structures & Algorithms", color: "#D97706", title: "Assessment 2", startDate: "2026-03-07", endDate: "2026-03-14", weight: "35%" },
   { id: "2004-3", courseCode: "COMP-2004", courseName: "Data Structures & Algorithms", color: "#D97706", title: "Assessment 3", startDate: "2026-03-28", endDate: "2026-04-12", weight: "30%" },
-  // COMP-2005 Project Management & QA
-  { id: "2005-1", courseCode: "COMP-2005", courseName: "Project Management & QA", color: "#7C3AED", title: "Assessment 1", startDate: "2026-03-04", endDate: "2026-03-22", weight: "50%" },
-  { id: "2005-2", courseCode: "COMP-2005", courseName: "Project Management & QA", color: "#7C3AED", title: "Assessment 2", startDate: "2026-03-25", endDate: "2026-04-12", weight: "50%" },
+  { id: "2005-1", courseCode: "COMP-2005", courseName: "Project Management & QA",      color: "#7C3AED", title: "Assessment 1", startDate: "2026-03-04", endDate: "2026-03-22", weight: "50%" },
+  { id: "2005-2", courseCode: "COMP-2005", courseName: "Project Management & QA",      color: "#7C3AED", title: "Assessment 2", startDate: "2026-03-25", endDate: "2026-04-12", weight: "50%" },
 ]
 
 const COURSE_ORDER = ["COMP-2001", "COMP-2002", "COMP-2003", "COMP-2004", "COMP-2005"]
@@ -48,17 +42,41 @@ function getDaysInMonth(year: number, month: number) {
 
 function getFirstDayOfMonth(year: number, month: number) {
   const day = new Date(year, month, 1).getDay()
-  return day === 0 ? 6 : day - 1 // Monday-first
+  return day === 0 ? 6 : day - 1
 }
 
 function dateToStr(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
 }
 
+// ── Countdown helpers ────────────────────────────────────────────────────
+
+function daysUntil(dateStr: string): number {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const target = new Date(dateStr + "T00:00:00")
+  return Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+}
+
+function countdownLabel(days: number): string {
+  if (days < 0)  return "Passed"
+  if (days === 0) return "Today!"
+  if (days === 1) return "Tomorrow"
+  return `${days}d left`
+}
+
+function countdownColor(days: number): string {
+  if (days < 0)  return "hsl(var(--muted-foreground))"
+  if (days <= 3)  return "#EF4444"
+  if (days <= 7)  return "#EAB308"
+  return "#22C55E"
+}
+
 export function CalendarView() {
   const today = new Date()
-  const [currentDate, setCurrentDate] = useState(new Date()) 
+  const [currentDate, setCurrentDate] = useState(new Date())
   const [selected, setSelected] = useState<Assessment | null>(null)
+
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
   const monthName = currentDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })
@@ -66,7 +84,6 @@ export function CalendarView() {
   const firstDay = getFirstDayOfMonth(year, month)
   const todayStr = dateToStr(today)
 
-  // Build grid: 7 cols, enough rows
   const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7
   const cells: (number | null)[] = [
     ...Array(firstDay).fill(null),
@@ -76,13 +93,11 @@ export function CalendarView() {
   const weeks = []
   for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
 
-  // For a given day, get assessments that span it
   function getAssessmentsForDay(day: number): Assessment[] {
     const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
     return ASSESSMENTS.filter(a => a.startDate <= dateStr && a.endDate >= dateStr)
   }
 
-  // For a given day + assessment, determine bar segment type
   function getBarType(day: number, a: Assessment): "start" | "end" | "middle" | "single" {
     const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
     const isStart = a.startDate === dateStr
@@ -101,8 +116,6 @@ export function CalendarView() {
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1))
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1))
 
-  // Legend
-  const activeCourses = COURSE_ORDER.map(code => ASSESSMENTS.find(a => a.courseCode === code)).filter(Boolean)
   const seen = new Set<string>()
   const legend = ASSESSMENTS.filter(a => {
     if (seen.has(a.courseCode)) return false
@@ -124,8 +137,6 @@ export function CalendarView() {
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
-
-        {/* Legend */}
         <div className="flex items-center gap-3 flex-wrap justify-end">
           {legend.map(a => (
             <div key={a.courseCode} className="flex items-center gap-1.5">
@@ -159,8 +170,6 @@ export function CalendarView() {
                   const dateStr = day ? `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}` : null
                   const isToday = dateStr === todayStr
                   const dayAssessments = day ? getAssessmentsForDay(day) : []
-
-                  // Sort by COURSE_ORDER for consistent row placement
                   const sorted = [...dayAssessments].sort((a, b) =>
                     COURSE_ORDER.indexOf(a.courseCode) - COURSE_ORDER.indexOf(b.courseCode)
                   )
@@ -176,7 +185,6 @@ export function CalendarView() {
                     >
                       {day && (
                         <div className="flex flex-col h-full">
-                          {/* Day number */}
                           <div className="px-2 pt-1.5 pb-1">
                             <span className={cn(
                               "text-[11px] font-semibold",
@@ -187,12 +195,14 @@ export function CalendarView() {
                               {day}
                             </span>
                           </div>
-
-                          {/* Assessment bars */}
                           <div className="flex flex-col gap-0.5 px-0 pb-1 flex-1">
                             {sorted.map(a => {
                               const type = getBarType(day, a)
                               const deadline = isDeadline(day, a)
+                              const days = daysUntil(a.endDate)
+                              const cdColor = countdownColor(days)
+                              const cdLabel = countdownLabel(days)
+
                               return (
                                 <button
                                   key={a.id}
@@ -214,15 +224,15 @@ export function CalendarView() {
                                   }}
                                 >
                                   {(type === "start" || type === "single") && (
-                                    <span
-                                      className="text-[8px] font-bold truncate leading-none py-0.5"
-                                      style={{ color: a.color }}
-                                    >
+                                    <span className="text-[8px] font-bold truncate leading-none py-0.5" style={{ color: a.color }}>
                                       {a.courseName.split(" ")[0]} · {a.title.replace("Assessment ", "A")} · {a.weight}
                                     </span>
                                   )}
                                   {deadline && (
-                                    <span className="ml-auto shrink-0 text-[10px]">📌</span>
+                                    <span className="ml-auto shrink-0 flex items-center gap-0.5">
+                                      <span className="text-[8px] font-bold" style={{ color: cdColor }}>{cdLabel}</span>
+                                      <span className="text-[10px]">📌</span>
+                                    </span>
                                   )}
                                 </button>
                               )
@@ -240,52 +250,58 @@ export function CalendarView() {
       </div>
 
       {/* Detail popup */}
-      {selected && (
-        <div
-          className="rounded-xl border p-4 flex items-start justify-between gap-4 animate-in fade-in slide-in-from-bottom-2 duration-200"
-          style={{
-            backgroundColor: selected.color + "18",
-            borderColor: selected.color + "55",
-          }}
-        >
-          <div className="flex items-start gap-3">
-            <span
-              className="mt-0.5 h-3 w-3 rounded-sm shrink-0"
-              style={{ backgroundColor: selected.color }}
-            />
-            <div>
-              <p className="text-xs font-bold" style={{ color: selected.color }}>
-                {selected.courseCode} · {selected.courseName}
-              </p>
-              <p className="text-sm font-semibold text-[hsl(var(--foreground))] mt-0.5">
-                {selected.title}
-              </p>
-              <div className="flex items-center gap-4 mt-1.5">
-                <span className="text-[10px] text-[hsl(var(--muted-foreground))]">
-                  📅 {new Date(selected.startDate + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
-                  {" → "}
-                  {new Date(selected.endDate + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-                </span>
-                <span
-                  className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                  style={{ backgroundColor: selected.color + "33", color: selected.color }}
-                >
-                  {selected.weight}
-                </span>
-                <span className="text-[10px] text-[hsl(var(--muted-foreground))]">
-                  📌 Deadline: {new Date(selected.endDate + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long" })}
-                </span>
+      {selected && (() => {
+        const days = daysUntil(selected.endDate)
+        const cdColor = countdownColor(days)
+        const cdLabel = countdownLabel(days)
+        return (
+          <div
+            className="rounded-xl border p-4 flex items-start justify-between gap-4 animate-in fade-in slide-in-from-bottom-2 duration-200"
+            style={{ backgroundColor: selected.color + "18", borderColor: selected.color + "55" }}
+          >
+            <div className="flex items-start gap-3 flex-1">
+              <span className="mt-0.5 h-3 w-3 rounded-sm shrink-0" style={{ backgroundColor: selected.color }} />
+              <div className="flex-1">
+                <p className="text-xs font-bold" style={{ color: selected.color }}>
+                  {selected.courseCode} · {selected.courseName}
+                </p>
+                <p className="text-sm font-semibold text-[hsl(var(--foreground))] mt-0.5">
+                  {selected.title}
+                </p>
+                <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                  <span className="text-[10px] text-[hsl(var(--muted-foreground))]">
+                    📅 {new Date(selected.startDate + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                    {" → "}
+                    {new Date(selected.endDate + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                  </span>
+                  <span
+                    className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                    style={{ backgroundColor: selected.color + "33", color: selected.color }}
+                  >
+                    {selected.weight}
+                  </span>
+                  <span className="text-[10px] text-[hsl(var(--muted-foreground))]">
+                    📌 Deadline: {new Date(selected.endDate + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long" })}
+                  </span>
+                  {/* ── Countdown badge ── */}
+                  <span
+                    className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                    style={{ backgroundColor: cdColor + "22", color: cdColor, border: `1px solid ${cdColor}55` }}
+                  >
+                    ⏱ {cdLabel}
+                  </span>
+                </div>
               </div>
             </div>
+            <button
+              onClick={() => setSelected(null)}
+              className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors shrink-0"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
-          <button
-            onClick={() => setSelected(null)}
-            className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors shrink-0"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
+        )
+      })()}
     </div>
   )
 }
