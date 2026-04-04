@@ -174,7 +174,7 @@ export const initialPractices: Practice[] = [
   { id: "p-2005-a4", courseCode: "COMP-2005", course: "Project Management and QA", type: "assignment", title: "Practice Assignment 4", completed: false },
   { id: "p-2005-a5", courseCode: "COMP-2005", course: "Project Management and QA", type: "assignment", title: "Practice Assignment 5", completed: false },
   { id: "p-2005-a6", courseCode: "COMP-2005", course: "Project Management and QA", type: "assignment", title: "Practice Assignment 6", completed: false },
-]]
+]
 
 export const initialGrades: Grade[] = [
   { id: "g1", course: "Mathematics",      assessment: "Linear Algebra Quiz 1",  grade: "A",  weight: "10%" },
