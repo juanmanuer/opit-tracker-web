@@ -1,7 +1,7 @@
 import { NextAuthOptions } from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
 
-const ALLOWED_DOMAINS = ["students.opit.com", "opit.com"]
+const ALLOWED_DOMAINS = ["students.opit.com", "opit.com", "faculty.opit.com"]
 
 export const authOptions: NextAuthOptions = {
   providers: [
