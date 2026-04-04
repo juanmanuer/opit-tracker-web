@@ -139,37 +139,269 @@ export function AssessmentsPanel({ activeTerm }: PanelProps) {
 
 export function PracticesPanel({ activeTerm }: PanelProps) {
   const [practices, setPractices] = useState(initialPractices)
+  const [openCourses, setOpenCourses] = useState<Record<string, boolean>>({})
+  const [celebrating, setCelebrating] = useState<Record<string, boolean>>({})
 
-  const toggle = (id: string) => {
+  const courses = TERM_COURSES[activeTerm]
+
+  // Load saved state from DB
+  useEffect(() => {
+    fetch("/api/user/practices")
+      .then((r) => r.json())
+      .then((data: { practiceId: string; completed: boolean }[]) => {
+        if (!Array.isArray(data)) return
+        setPractices((prev) =>
+          prev.map((p) => {
+            const saved = data.find((d) => d.practiceId === p.id)
+            return saved ? { ...p, completed: saved.completed } : p
+          })
+        )
+      })
+      .catch(console.error)
+  }, [])
+
+  const toggle = async (id: string) => {
+    const practice = practices.find((p) => p.id === id)
+    if (!practice) return
+    const newCompleted = !practice.completed
+
     setPractices((prev) =>
-      prev.map((p) => p.id === id ? { ...p, completed: !p.completed } : p)
+      prev.map((p) => (p.id === id ? { ...p, completed: newCompleted } : p))
+    )
+
+    // Check if all practices for this course are now complete → celebrate
+    const courseCode = practice.courseCode
+    const updated = practices.map((p) =>
+      p.id === id ? { ...p, completed: newCompleted } : p
+    )
+    const coursePractices = updated.filter((p) => p.courseCode === courseCode)
+    const allDone = coursePractices.every((p) => p.completed)
+
+    if (allDone && newCompleted) {
+      setCelebrating((prev) => ({ ...prev, [courseCode]: true }))
+      setTimeout(
+        () => setCelebrating((prev) => ({ ...prev, [courseCode]: false })),
+        3000
+      )
+    }
+
+    await fetch("/api/user/practices", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ practiceId: id, completed: newCompleted }),
+    })
+  }
+
+  const toggleCourse = (code: string) => {
+    setOpenCourses((prev) => ({ ...prev, [code]: !prev[code] }))
+  }
+
+  if (courses.length === 0) {
+    return (
+      <div className="flex flex-col gap-3">
+        <p className="text-[10px] font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
+          Practices · {activeTerm}
+        </p>
+        <p className="text-xs text-[hsl(var(--muted-foreground))]">
+          No practices yet for {activeTerm}.
+        </p>
+      </div>
     )
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <p className="text-[10px] font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-1">
-        Practices
+    <div className="flex flex-col gap-3">
+      <p className="text-[10px] font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
+        Practices · {activeTerm}
       </p>
-      {practices.map((p) => (
-        <button
-          key={p.id}
-          onClick={() => toggle(p.id)}
-          className="flex items-start gap-2.5 rounded-lg p-2.5 text-left hover:bg-[hsl(var(--muted))] transition-colors"
-        >
-          {p.completed ? (
-            <Check className="h-3.5 w-3.5 mt-0.5 shrink-0 text-[hsl(160,100%,50%)]" />
-          ) : (
-            <Circle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-[hsl(var(--muted-foreground))]" />
-          )}
-          <div className="min-w-0">
-            <p className={cn("text-xs font-medium leading-tight", p.completed && "line-through text-[hsl(var(--muted-foreground))]")}>
-              {p.title}
-            </p>
-            <p className="text-[10px] text-[hsl(var(--muted-foreground))] mt-0.5">{p.course}</p>
+
+      {courses.map((course) => {
+        const coursePractices = practices.filter(
+          (p) => p.courseCode === course.code
+        )
+        if (coursePractices.length === 0) return null
+
+        const quizzes = coursePractices.filter((p) => p.type === "quiz")
+        const assignments = coursePractices.filter(
+          (p) => p.type === "assignment"
+        )
+        const doneCount = coursePractices.filter((p) => p.completed).length
+        const total = coursePractices.length
+        const allDone = doneCount === total
+        const isOpen = openCourses[course.code] !== false
+        const isCelebrating = celebrating[course.code]
+
+        return (
+          <div
+            key={course.code}
+            className="rounded-lg border overflow-hidden transition-all duration-300"
+            style={{
+              borderColor: allDone ? course.color : "hsl(var(--border))",
+              boxShadow: allDone ? `0 0 12px ${course.color}44` : "none",
+            }}
+          >
+            {/* Course header */}
+            <button
+              onClick={() => toggleCourse(course.code)}
+              className="w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors hover:opacity-90"
+              style={{
+                backgroundColor: course.color + "22",
+                borderLeft: "3px solid " + course.color,
+              }}
+            >
+              <div className="min-w-0">
+                <p
+                  className="text-[10px] font-bold uppercase tracking-wide"
+                  style={{ color: course.color }}
+                >
+                  {course.code}
+                </p>
+                <p className="text-xs font-semibold text-[hsl(var(--foreground))] truncate">
+                  {course.name}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 ml-2">
+                {allDone && (
+                  <span
+                    className="text-[9px] font-bold px-1.5 py-0.5 rounded-full animate-pulse"
+                    style={{
+                      backgroundColor: course.color + "33",
+                      color: course.color,
+                    }}
+                  >
+                    +5 pts 🎉
+                  </span>
+                )}
+                <span className="text-[10px] text-[hsl(var(--muted-foreground))]">
+                  {doneCount}/{total}
+                </span>
+                <span
+                  className="text-[10px] text-[hsl(var(--muted-foreground))]"
+                  style={{
+                    transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+                    display: "inline-block",
+                    transition: "transform 0.2s",
+                  }}
+                >
+                  ▾
+                </span>
+              </div>
+            </button>
+
+            {/* Celebration banner */}
+            {isCelebrating && (
+              <div
+                className="px-3 py-2 text-center text-xs font-bold animate-bounce"
+                style={{
+                  backgroundColor: course.color + "22",
+                  color: course.color,
+                }}
+              >
+                🏆 All practices done! +5 bonus points for {course.code}!
+              </div>
+            )}
+
+            {/* Progress bar */}
+            {isOpen && (
+              <div className="px-3 pt-2">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[9px] text-[hsl(var(--muted-foreground))]">
+                    {allDone
+                      ? "🏆 Bonus achieved! +5 pts"
+                      : `${total - doneCount} remaining for +5 bonus`}
+                  </span>
+                  <span
+                    className="text-[9px] font-medium"
+                    style={{ color: course.color }}
+                  >
+                    {doneCount}/{total}
+                  </span>
+                </div>
+                <div className="h-1 rounded-full bg-[hsl(var(--muted))] overflow-hidden mb-3">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${(doneCount / total) * 100}%`,
+                      backgroundColor: course.color,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Practice items */}
+            {isOpen && (
+              <div className="flex flex-col pb-2">
+                {/* Quizzes section */}
+                {quizzes.length > 0 && (
+                  <>
+                    <p className="text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 text-[hsl(var(--muted-foreground))] bg-[hsl(var(--muted)/0.5)]">
+                      📝 Practice Quizzes ({quizzes.filter(q => q.completed).length}/{quizzes.length})
+                    </p>
+                    <div className="flex flex-col divide-y divide-border">
+                      {quizzes.map((p) => (
+                        <button
+                          key={p.id}
+                          onClick={() => toggle(p.id)}
+                          className="flex items-center gap-2.5 px-3 py-2 text-left hover:bg-[hsl(var(--muted))] transition-colors w-full"
+                        >
+                          {p.completed ? (
+                            <Check className="h-3.5 w-3.5 shrink-0 text-[hsl(160,100%,50%)]" />
+                          ) : (
+                            <Circle className="h-3.5 w-3.5 shrink-0 text-[hsl(var(--muted-foreground))]" />
+                          )}
+                          <p
+                            className={cn(
+                              "text-xs font-medium flex-1 leading-tight",
+                              p.completed &&
+                                "line-through text-[hsl(var(--muted-foreground))]"
+                            )}
+                          >
+                            {p.title}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {/* Assignments section */}
+                {assignments.length > 0 && (
+                  <>
+                    <p className="text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 text-[hsl(var(--muted-foreground))] bg-[hsl(var(--muted)/0.5)]">
+                      📋 Practice Assignments ({assignments.filter(a => a.completed).length}/{assignments.length})
+                    </p>
+                    <div className="flex flex-col divide-y divide-border">
+                      {assignments.map((p) => (
+                        <button
+                          key={p.id}
+                          onClick={() => toggle(p.id)}
+                          className="flex items-center gap-2.5 px-3 py-2 text-left hover:bg-[hsl(var(--muted))] transition-colors w-full"
+                        >
+                          {p.completed ? (
+                            <Check className="h-3.5 w-3.5 shrink-0 text-[hsl(160,100%,50%)]" />
+                          ) : (
+                            <Circle className="h-3.5 w-3.5 shrink-0 text-[hsl(var(--muted-foreground))]" />
+                          )}
+                          <p
+                            className={cn(
+                              "text-xs font-medium flex-1 leading-tight",
+                              p.completed &&
+                                "line-through text-[hsl(var(--muted-foreground))]"
+                            )}
+                          >
+                            {p.title}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
-        </button>
-      ))}
+        )
+      })}
     </div>
   )
 }

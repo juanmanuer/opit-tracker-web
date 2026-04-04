@@ -18,6 +18,8 @@ export interface Practice {
   id: string
   title: string
   course: string
+  courseCode: string
+  type: "quiz" | "assignment"
   completed: boolean
 }
 
@@ -109,12 +111,70 @@ export const initialAssessments: Assessment[] = [
 ]
 
 export const initialPractices: Practice[] = [
-  { id: "p1", title: "Binary Trees Worksheet",   course: "Computer Science", completed: true },
-  { id: "p2", title: "Matrix Operations Set 5",  course: "Mathematics",      completed: false },
-  { id: "p3", title: "SQL Query Exercises",       course: "Database Systems", completed: false },
-  { id: "p4", title: "Probability Problems Ch.7", course: "Mathematics",      completed: true },
-  { id: "p5", title: "Network Topology Lab",      course: "Networking",       completed: false },
-]
+  // ── COMP-2001 Foundational Mathematics — 12 Practice Quizzes ──────────
+  { id: "p-2001-q1",  courseCode: "COMP-2001", course: "Foundational Mathematics", type: "quiz", title: "Practice Quiz 1",  completed: false },
+  { id: "p-2001-q2",  courseCode: "COMP-2001", course: "Foundational Mathematics", type: "quiz", title: "Practice Quiz 2",  completed: false },
+  { id: "p-2001-q3",  courseCode: "COMP-2001", course: "Foundational Mathematics", type: "quiz", title: "Practice Quiz 3",  completed: false },
+  { id: "p-2001-q4",  courseCode: "COMP-2001", course: "Foundational Mathematics", type: "quiz", title: "Practice Quiz 4",  completed: false },
+  { id: "p-2001-q5",  courseCode: "COMP-2001", course: "Foundational Mathematics", type: "quiz", title: "Practice Quiz 5",  completed: false },
+  { id: "p-2001-q6",  courseCode: "COMP-2001", course: "Foundational Mathematics", type: "quiz", title: "Practice Quiz 6",  completed: false },
+  { id: "p-2001-q7",  courseCode: "COMP-2001", course: "Foundational Mathematics", type: "quiz", title: "Practice Quiz 7",  completed: false },
+  { id: "p-2001-q8",  courseCode: "COMP-2001", course: "Foundational Mathematics", type: "quiz", title: "Practice Quiz 8",  completed: false },
+  { id: "p-2001-q9",  courseCode: "COMP-2001", course: "Foundational Mathematics", type: "quiz", title: "Practice Quiz 9",  completed: false },
+  { id: "p-2001-q10", courseCode: "COMP-2001", course: "Foundational Mathematics", type: "quiz", title: "Practice Quiz 10", completed: false },
+  { id: "p-2001-q11", courseCode: "COMP-2001", course: "Foundational Mathematics", type: "quiz", title: "Practice Quiz 11", completed: false },
+  { id: "p-2001-q12", courseCode: "COMP-2001", course: "Foundational Mathematics", type: "quiz", title: "Practice Quiz 12", completed: false },
+
+  // ── COMP-2002 Web Development — 10 Quizzes + 10 Assignments ───────────
+  { id: "p-2002-q1",  courseCode: "COMP-2002", course: "Web Development", type: "quiz", title: "Practice Quiz 1",  completed: false },
+  { id: "p-2002-q2",  courseCode: "COMP-2002", course: "Web Development", type: "quiz", title: "Practice Quiz 2",  completed: false },
+  { id: "p-2002-q3",  courseCode: "COMP-2002", course: "Web Development", type: "quiz", title: "Practice Quiz 3",  completed: false },
+  { id: "p-2002-q4",  courseCode: "COMP-2002", course: "Web Development", type: "quiz", title: "Practice Quiz 4",  completed: false },
+  { id: "p-2002-q5",  courseCode: "COMP-2002", course: "Web Development", type: "quiz", title: "Practice Quiz 5",  completed: false },
+  { id: "p-2002-q6",  courseCode: "COMP-2002", course: "Web Development", type: "quiz", title: "Practice Quiz 6",  completed: false },
+  { id: "p-2002-q7",  courseCode: "COMP-2002", course: "Web Development", type: "quiz", title: "Practice Quiz 7",  completed: false },
+  { id: "p-2002-q8",  courseCode: "COMP-2002", course: "Web Development", type: "quiz", title: "Practice Quiz 8",  completed: false },
+  { id: "p-2002-q9",  courseCode: "COMP-2002", course: "Web Development", type: "quiz", title: "Practice Quiz 9",  completed: false },
+  { id: "p-2002-q10", courseCode: "COMP-2002", course: "Web Development", type: "quiz", title: "Practice Quiz 10", completed: false },
+  { id: "p-2002-a1",  courseCode: "COMP-2002", course: "Web Development", type: "assignment", title: "Practice Assignment 1",  completed: false },
+  { id: "p-2002-a2",  courseCode: "COMP-2002", course: "Web Development", type: "assignment", title: "Practice Assignment 2",  completed: false },
+  { id: "p-2002-a3",  courseCode: "COMP-2002", course: "Web Development", type: "assignment", title: "Practice Assignment 3",  completed: false },
+  { id: "p-2002-a4",  courseCode: "COMP-2002", course: "Web Development", type: "assignment", title: "Practice Assignment 4",  completed: false },
+  { id: "p-2002-a5",  courseCode: "COMP-2002", course: "Web Development", type: "assignment", title: "Practice Assignment 5",  completed: false },
+  { id: "p-2002-a6",  courseCode: "COMP-2002", course: "Web Development", type: "assignment", title: "Practice Assignment 6",  completed: false },
+  { id: "p-2002-a7",  courseCode: "COMP-2002", course: "Web Development", type: "assignment", title: "Practice Assignment 7",  completed: false },
+  { id: "p-2002-a8",  courseCode: "COMP-2002", course: "Web Development", type: "assignment", title: "Practice Assignment 8",  completed: false },
+  { id: "p-2002-a9",  courseCode: "COMP-2002", course: "Web Development", type: "assignment", title: "Practice Assignment 9",  completed: false },
+  { id: "p-2002-a10", courseCode: "COMP-2002", course: "Web Development", type: "assignment", title: "Practice Assignment 10", completed: false },
+
+  // ── COMP-2003 Operating Systems — 12 Practice Quizzes ─────────────────
+  { id: "p-2003-q1",  courseCode: "COMP-2003", course: "Introduction to Operating Systems", type: "quiz", title: "Practice Quiz 1",  completed: false },
+  { id: "p-2003-q2",  courseCode: "COMP-2003", course: "Introduction to Operating Systems", type: "quiz", title: "Practice Quiz 2",  completed: false },
+  { id: "p-2003-q3",  courseCode: "COMP-2003", course: "Introduction to Operating Systems", type: "quiz", title: "Practice Quiz 3",  completed: false },
+  { id: "p-2003-q4",  courseCode: "COMP-2003", course: "Introduction to Operating Systems", type: "quiz", title: "Practice Quiz 4",  completed: false },
+  { id: "p-2003-q5",  courseCode: "COMP-2003", course: "Introduction to Operating Systems", type: "quiz", title: "Practice Quiz 5",  completed: false },
+  { id: "p-2003-q6",  courseCode: "COMP-2003", course: "Introduction to Operating Systems", type: "quiz", title: "Practice Quiz 6",  completed: false },
+  { id: "p-2003-q7",  courseCode: "COMP-2003", course: "Introduction to Operating Systems", type: "quiz", title: "Practice Quiz 7",  completed: false },
+  { id: "p-2003-q8",  courseCode: "COMP-2003", course: "Introduction to Operating Systems", type: "quiz", title: "Practice Quiz 8",  completed: false },
+  { id: "p-2003-q9",  courseCode: "COMP-2003", course: "Introduction to Operating Systems", type: "quiz", title: "Practice Quiz 9",  completed: false },
+  { id: "p-2003-q10", courseCode: "COMP-2003", course: "Introduction to Operating Systems", type: "quiz", title: "Practice Quiz 10", completed: false },
+  { id: "p-2003-q11", courseCode: "COMP-2003", course: "Introduction to Operating Systems", type: "quiz", title: "Practice Quiz 11", completed: false },
+  { id: "p-2003-q12", courseCode: "COMP-2003", course: "Introduction to Operating Systems", type: "quiz", title: "Practice Quiz 12", completed: false },
+
+  // ── COMP-2004 Data Structures & Algorithms — 4 Practice Quizzes ───────
+  { id: "p-2004-q1", courseCode: "COMP-2004", course: "Data Structure and Algorithms", type: "quiz", title: "Practice Quiz 1", completed: false },
+  { id: "p-2004-q2", courseCode: "COMP-2004", course: "Data Structure and Algorithms", type: "quiz", title: "Practice Quiz 2", completed: false },
+  { id: "p-2004-q3", courseCode: "COMP-2004", course: "Data Structure and Algorithms", type: "quiz", title: "Practice Quiz 3", completed: false },
+  { id: "p-2004-q4", courseCode: "COMP-2004", course: "Data Structure and Algorithms", type: "quiz", title: "Practice Quiz 4", completed: false },
+
+  // ── COMP-2005 Project Management & QA — 6 Practice Assignments ────────
+  { id: "p-2005-a1", courseCode: "COMP-2005", course: "Project Management and QA", type: "assignment", title: "Practice Assignment 1", completed: false },
+  { id: "p-2005-a2", courseCode: "COMP-2005", course: "Project Management and QA", type: "assignment", title: "Practice Assignment 2", completed: false },
+  { id: "p-2005-a3", courseCode: "COMP-2005", course: "Project Management and QA", type: "assignment", title: "Practice Assignment 3", completed: false },
+  { id: "p-2005-a4", courseCode: "COMP-2005", course: "Project Management and QA", type: "assignment", title: "Practice Assignment 4", completed: false },
+  { id: "p-2005-a5", courseCode: "COMP-2005", course: "Project Management and QA", type: "assignment", title: "Practice Assignment 5", completed: false },
+  { id: "p-2005-a6", courseCode: "COMP-2005", course: "Project Management and QA", type: "assignment", title: "Practice Assignment 6", completed: false },
+]]
 
 export const initialGrades: Grade[] = [
   { id: "g1", course: "Mathematics",      assessment: "Linear Algebra Quiz 1",  grade: "A",  weight: "10%" },
