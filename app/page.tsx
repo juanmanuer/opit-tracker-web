@@ -99,7 +99,7 @@ const [activeTerm, setActiveTerm] = useState<Term>("Term 2")
 
               {/* Content */}
               <div className="flex-1 min-h-0 overflow-y-auto">
-                {mainView === "kanban" ? <KanbanBoard /> : <CalendarView />}
+                {mainView === "kanban" ? <KanbanBoard activeTerm={activeTerm} /> : <CalendarView />}              
               </div>
             </main>
           </div>
