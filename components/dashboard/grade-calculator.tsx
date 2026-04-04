@@ -1,8 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, Award, Zap, TrendingUp } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { X, Award, Zap, TrendingUp, Target } from "lucide-react"
 import type { Term } from "@/lib/store"
 
 interface Assessment {
@@ -104,6 +103,8 @@ export function GradeCalculator({ activeTerm, onClose }: Props) {
   const [activeTab, setActiveTab] = useState(0)
   const [bonusAttendance, setBonusAttendance] = useState(false)
   const [bonusPractice, setBonusPractice] = useState(false)
+  const [targetScore, setTargetScore] = useState<number>(70)
+  const [showTarget, setShowTarget] = useState(false)
 
   useEffect(() => {
     fetch(`/api/user/grades?term=${encodeURIComponent(termKey)}`)
@@ -156,13 +157,36 @@ export function GradeCalculator({ activeTerm, onClose }: Props) {
     return Math.min(110, avg + (bonusAttendance ? 5 : 0) + (bonusPractice ? 5 : 0))
   }
 
+  // ── What do I need? calculator ─────────────────────────────────────────
+  const getRequiredScore = (course: Course, target: number, bonuses: number) => {
+    const adjustedTarget = target - bonuses
+    const filled = course.assessments.filter(a => a.score !== null)
+    const remaining = course.assessments.filter(a => a.score === null)
+
+    if (remaining.length === 0) return null // all done
+
+    const earnedSoFar = filled.reduce((sum, a) => sum + (a.score! * a.weight) / 100, 0)
+    const remainingWeight = remaining.reduce((sum, a) => sum + a.weight, 0)
+
+    if (remainingWeight === 0) return null
+
+    const needed = ((adjustedTarget - earnedSoFar) / remainingWeight) * 100
+    return needed
+  }
+
   const course = courses[activeTab]
   const courseScore = getCourseScore(course)
+  const bonuses = (bonusAttendance ? 5 : 0) + (bonusPractice ? 5 : 0)
   const withBonus = courseScore !== null
-    ? Math.min(110, courseScore + (bonusAttendance ? 5 : 0) + (bonusPractice ? 5 : 0))
+    ? Math.min(110, courseScore + bonuses)
     : null
   const grade = withBonus !== null ? getGrade(withBonus) : null
   const termAvg = getTermAvg()
+
+  const requiredScore = getRequiredScore(course, targetScore, bonuses)
+  const remainingAssessments = course.assessments.filter(a => a.score === null)
+  const isAchievable = requiredScore !== null && requiredScore <= 100
+  const isAlreadyAchieved = courseScore !== null && (courseScore + bonuses) >= targetScore && remainingAssessments.length === 0
 
   return (
     <div
@@ -185,17 +209,31 @@ export function GradeCalculator({ activeTerm, onClose }: Props) {
               <p className="text-[10px]" style={{ color: "#8b949e" }}>{activeTerm} · out of 100</p>
             </div>
           </div>
-          {/* Term average pill */}
-          {termAvg !== null && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full" style={{ backgroundColor: "#161b22", border: "1px solid #30363d" }}>
-              <span className="text-[10px]" style={{ color: "#8b949e" }}>Term avg</span>
-              <span className="text-sm font-bold" style={{ color: getGrade(termAvg).color }}>{termAvg.toFixed(1)}</span>
-              <span className="text-[10px] font-bold" style={{ color: getGrade(termAvg).color }}>{getGrade(termAvg).letter}</span>
-            </div>
-          )}
-          <button onClick={onClose} className="h-8 w-8 rounded-lg flex items-center justify-center transition-colors hover:bg-[#21262d]" style={{ color: "#8b949e" }}>
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-3">
+            {termAvg !== null && (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full" style={{ backgroundColor: "#161b22", border: "1px solid #30363d" }}>
+                <span className="text-[10px]" style={{ color: "#8b949e" }}>Term avg</span>
+                <span className="text-sm font-bold" style={{ color: getGrade(termAvg).color }}>{termAvg.toFixed(1)}</span>
+                <span className="text-[10px] font-bold" style={{ color: getGrade(termAvg).color }}>{getGrade(termAvg).letter}</span>
+              </div>
+            )}
+            {/* Target toggle */}
+            <button
+              onClick={() => setShowTarget(p => !p)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-medium transition-all"
+              style={{
+                backgroundColor: showTarget ? "#e3b34122" : "#21262d",
+                border: `1px solid ${showTarget ? "#e3b34166" : "#30363d"}`,
+                color: showTarget ? "#e3b341" : "#8b949e",
+              }}
+            >
+              <Target className="h-3 w-3" />
+              Target
+            </button>
+            <button onClick={onClose} className="h-8 w-8 rounded-lg flex items-center justify-center transition-colors hover:bg-[#21262d]" style={{ color: "#8b949e" }}>
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         {/* Course tabs */}
@@ -207,7 +245,7 @@ export function GradeCalculator({ activeTerm, onClose }: Props) {
               <button
                 key={c.code}
                 onClick={() => setActiveTab(i)}
-                className="flex items-center gap-2 px-3 py-2 rounded-t-lg text-xs font-medium transition-all shrink-0 relative"
+                className="flex items-center gap-2 px-3 py-2 rounded-t-lg text-xs font-medium transition-all shrink-0"
                 style={{
                   backgroundColor: isActive ? "#161b22" : "transparent",
                   color: isActive ? c.color : "#8b949e",
@@ -230,6 +268,103 @@ export function GradeCalculator({ activeTerm, onClose }: Props) {
 
         {/* Active course content */}
         <div className="flex-1 overflow-y-auto p-5" style={{ backgroundColor: "#161b22" }}>
+
+          {/* ── Target score panel ── */}
+          {showTarget && (
+            <div
+              className="mb-5 rounded-xl p-4 flex flex-col gap-3"
+              style={{ backgroundColor: "#0d1117", border: "1px solid #30363d" }}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Target className="h-4 w-4" style={{ color: "#e3b341" }} />
+                  <span className="text-xs font-semibold" style={{ color: "#e6edf3" }}>
+                    What do I need to score?
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px]" style={{ color: "#8b949e" }}>Target:</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={targetScore}
+                    onChange={e => setTargetScore(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
+                    className="w-14 text-center text-sm font-bold rounded-lg px-2 py-1 outline-none"
+                    style={{
+                      backgroundColor: "#161b22",
+                      border: "1px solid #e3b34188",
+                      color: "#e3b341",
+                    }}
+                  />
+                  <span className="text-[10px] font-bold" style={{ color: "#e3b341" }}>
+                    {getGrade(targetScore).letter}
+                  </span>
+                </div>
+              </div>
+
+              {/* Result */}
+              {remainingAssessments.length === 0 ? (
+                <div className="rounded-lg px-3 py-2 text-center" style={{ backgroundColor: "#21262d" }}>
+                  <p className="text-xs" style={{ color: "#8b949e" }}>All assessments submitted — no remaining work.</p>
+                </div>
+              ) : requiredScore === null ? (
+                <div className="rounded-lg px-3 py-2 text-center" style={{ backgroundColor: "#21262d" }}>
+                  <p className="text-xs" style={{ color: "#8b949e" }}>Enter scores above to calculate what you need.</p>
+                </div>
+              ) : (
+                <div
+                  className="rounded-lg px-4 py-3 flex items-center justify-between"
+                  style={{
+                    backgroundColor: isAchievable ? "#3fb95011" : "#f8514911",
+                    border: `1px solid ${isAchievable ? "#3fb95033" : "#f8514933"}`,
+                  }}
+                >
+                  <div>
+                    <p className="text-[10px]" style={{ color: "#8b949e" }}>
+                      Average needed on {remainingAssessments.length} remaining assessment{remainingAssessments.length > 1 ? "s" : ""}
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: "#8b949e" }}>
+                      ({remainingAssessments.map(a => a.label).join(", ")})
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p
+                      className="text-3xl font-bold"
+                      style={{ color: isAchievable ? "#3fb950" : "#f85149" }}
+                    >
+                      {requiredScore < 0 ? "Done!" : `${Math.ceil(requiredScore)}`}
+                    </p>
+                    <p className="text-[10px] font-medium" style={{ color: isAchievable ? "#3fb950" : "#f85149" }}>
+                      {requiredScore < 0
+                        ? "Already achieved 🎉"
+                        : isAchievable
+                        ? `${getGrade(requiredScore).letter} needed — achievable ✓`
+                        : "Not achievable — target too high ✗"}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Per-assessment breakdown */}
+              {remainingAssessments.length > 0 && requiredScore !== null && requiredScore > 0 && (
+                <div className="flex flex-col gap-1">
+                  {remainingAssessments.map((a, i) => (
+                    <div key={i} className="flex items-center justify-between px-2">
+                      <span className="text-[10px]" style={{ color: "#8b949e" }}>{a.label} ({a.weight}%)</span>
+                      <span
+                        className="text-[10px] font-bold"
+                        style={{ color: isAchievable ? "#3fb950" : "#f85149" }}
+                      >
+                        needs ≥ {Math.ceil(requiredScore)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Course title + score */}
           <div className="flex items-center justify-between mb-5">
             <div>
@@ -244,11 +379,12 @@ export function GradeCalculator({ activeTerm, onClose }: Props) {
             )}
           </div>
 
-          {/* Assessment sliders */}
+          {/* Assessment inputs */}
           <div className="flex flex-col gap-4">
             {course.assessments.map((ass, ai) => {
               const contribution = ass.score !== null ? (ass.score * ass.weight) / 100 : null
               const pct = ass.score ?? 0
+              const isRemaining = ass.score === null
               return (
                 <div key={ai}>
                   <div className="flex items-center justify-between mb-1.5">
@@ -257,6 +393,17 @@ export function GradeCalculator({ activeTerm, onClose }: Props) {
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: course.color + "22", color: course.color }}>
                         {ass.weight}%
                       </span>
+                      {isRemaining && showTarget && requiredScore !== null && requiredScore > 0 && (
+                        <span
+                          className="text-[9px] px-1.5 py-0.5 rounded-full font-medium"
+                          style={{
+                            backgroundColor: isAchievable ? "#3fb95022" : "#f8514922",
+                            color: isAchievable ? "#3fb950" : "#f85149",
+                          }}
+                        >
+                          need ≥ {Math.ceil(requiredScore)}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-3">
                       {contribution !== null && (
@@ -280,7 +427,6 @@ export function GradeCalculator({ activeTerm, onClose }: Props) {
                       />
                     </div>
                   </div>
-                  {/* Progress bar */}
                   <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "#21262d" }}>
                     <div
                       className="h-full rounded-full transition-all duration-300"
