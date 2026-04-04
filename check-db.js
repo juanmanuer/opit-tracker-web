@@ -3,10 +3,11 @@ const { neon } = require('@neondatabase/serverless');
 const sql = neon(process.env.DATABASE_URL);
 
 sql`
-  CREATE TABLE IF NOT EXISTS user_practices (
+  CREATE TABLE IF NOT EXISTS user_notes (
+    id SERIAL PRIMARY KEY,
     email TEXT NOT NULL,
-    practice_id TEXT NOT NULL,
-    completed BOOLEAN DEFAULT FALSE,
-    PRIMARY KEY (email, practice_id)
+    term TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
   )
-`.then(() => console.log('Table created!')).catch(console.error);
+`.then(() => console.log('Notes table created!')).catch(console.error);

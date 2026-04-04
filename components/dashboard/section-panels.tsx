@@ -1,5 +1,6 @@
 "use client"
 
+import { Copy, Video, Mail, ExternalLink, BookOpen, Shield, Users, ChevronDown, ChevronUp, Plus, Trash2, Book } from "lucide-react"
 import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { GradeCalculator } from "@/components/dashboard/grade-calculator"
@@ -22,6 +23,15 @@ import {
   CheckCircle2,
   XCircle,
   MinusCircle,
+  Copy,
+  BookOpen,
+  Shield,
+  Users,
+  ChevronDown,
+  ChevronUp,
+  Plus,
+  Trash2,
+  Book,
 } from "lucide-react"
 
 interface PanelProps {
@@ -518,39 +528,338 @@ function getCourseColor(code: string): string {
 }
 
 export function MiscPanel({ activeTerm }: PanelProps) {
-  const getIcon = (type: string) => {
-    if (type === "email") return Mail
-    if (type === "zoom") return Video
-    return ExternalLink
+  const professors = TERM_PROFESSORS[activeTerm] ?? []
+  const [openProf, setOpenProf] = useState<Record<string, boolean>>({})
+  const [notes, setNotes] = useState<{ id: number; content: string; createdAt: string }[]>([])
+  const [newNote, setNewNote] = useState("")
+  const [addingNote, setAddingNote] = useState(false)
+  const [copied, setCopied] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch(`/api/user/notes?term=${encodeURIComponent(activeTerm)}`)
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data)) setNotes(data) })
+      .catch(console.error)
+  }, [activeTerm])
+
+  const toggleProf = (name: string) => {
+    setOpenProf((prev) => ({ ...prev, [name]: !prev[name] }))
   }
 
-  const getHref = (type: string, value: string) => {
-    if (type === "email") return "mailto:" + value
-    return value
+  const copyToClipboard = (text: string, key: string) => {
+    navigator.clipboard.writeText(text)
+    setCopied(key)
+    setTimeout(() => setCopied(null), 2000)
   }
+
+  const addNote = async () => {
+    if (!newNote.trim()) return
+    const res = await fetch("/api/user/notes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: newNote.trim(), term: activeTerm }),
+    })
+    const data = await res.json()
+    setNotes((prev) => [
+      { id: data.id, content: newNote.trim(), createdAt: new Date().toISOString() },
+      ...prev,
+    ])
+    setNewNote("")
+    setAddingNote(false)
+  }
+
+  const deleteNote = async (id: number) => {
+    await fetch("/api/user/notes", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    })
+    setNotes((prev) => prev.filter((n) => n.id !== id))
+  }
+
+  const getLinkIcon = (icon: string) => {
+    switch (icon) {
+      case "canvas":   return <BookOpen className="h-3.5 w-3.5" />
+      case "portal":   return <Users className="h-3.5 w-3.5" />
+      case "library":  return <Book className="h-3.5 w-3.5" />
+      case "rules":    return <Shield className="h-3.5 w-3.5" />
+      case "support":  return <Users className="h-3.5 w-3.5" />
+      default:         return <ExternalLink className="h-3.5 w-3.5" />
+    }
+  }
+
+  const courses = TERM_COURSES[activeTerm]
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <p className="text-[10px] font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-1">
-        Quick Links
-      </p>
-      {initialMiscItems.map((item) => {
-        const Icon = getIcon(item.type)
-        const href = getHref(item.type, item.value)
-        return (
+    <div className="flex flex-col gap-4">
+
+      {/* ── SECTION 1: Contact Directory ── */}
+      <div>
+        <p className="text-[10px] font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-2">
+          👨‍🏫 Professors · {activeTerm}
+        </p>
+
+        {professors.length === 0 ? (
+          <p className="text-xs text-[hsl(var(--muted-foreground))]">
+            No contacts yet for {activeTerm}.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {professors.map((prof) => {
+              const course = courses.find((c) => c.code === prof.courseCode)
+              const color = course?.color ?? "#6B7280"
+              const isOpen = openProf[prof.name] ?? false
+
+              return (
+                <div
+                  key={prof.name}
+                  className="rounded-lg border border-border overflow-hidden"
+                  style={{
+                    borderLeft: `3px solid ${color}`,
+                  }}
+                >
+                  {/* Header */}
+                  <button
+                    onClick={() => toggleProf(prof.name)}
+                    className="w-full flex items-center justify-between px-3 py-2.5 text-left hover:opacity-90 transition-colors"
+                    style={{ backgroundColor: color + "15" }}
+                  >
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color }}>
+                        {prof.courseCode}
+                      </p>
+                      <p className="text-xs font-semibold text-[hsl(var(--foreground))] truncate">
+                        {prof.name}
+                      </p>
+                      <p className="text-[10px] text-[hsl(var(--muted-foreground))] truncate">
+                        {prof.courseName}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          window.open(`mailto:${prof.email}`)
+                        }}
+                        className="p-1 rounded-md hover:bg-[hsl(var(--muted))] transition-colors"
+                        title={prof.email}
+                      >
+                        <Mail className="h-3 w-3 text-[hsl(var(--muted-foreground))]" />
+                      </button>
+                      {isOpen ? (
+                        <ChevronUp className="h-3.5 w-3.5 text-[hsl(var(--muted-foreground))]" />
+                      ) : (
+                        <ChevronDown className="h-3.5 w-3.5 text-[hsl(var(--muted-foreground))]" />
+                      )}
+                    </div>
+                  </button>
+
+                  {/* Expanded details */}
+                  {isOpen && (
+                    <div className="px-3 py-2.5 flex flex-col gap-2.5 bg-[hsl(var(--card))]">
+
+                      {/* Email */}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-[9px] text-[hsl(var(--muted-foreground))] uppercase tracking-wider">Email</p>
+                          <p className="text-[11px] text-[hsl(var(--foreground))]">{prof.email}</p>
+                        </div>
+                        <button
+                          onClick={() => copyToClipboard(prof.email, prof.name + "-email")}
+                          className="p-1.5 rounded-md hover:bg-[hsl(var(--muted))] transition-colors"
+                        >
+                          <Copy className="h-3 w-3 text-[hsl(var(--muted-foreground))]" />
+                        </button>
+                      </div>
+
+                      {/* Live Sessions */}
+                      <div>
+                        <p className="text-[9px] text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-0.5">
+                          🎥 Live Sessions
+                        </p>
+                        <p className="text-[11px] text-[hsl(var(--foreground))]">{prof.liveSessions}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] text-[hsl(var(--muted-foreground))]">
+                            ID: {prof.meetingId}
+                          </span>
+                          <button
+                            onClick={() => copyToClipboard(prof.meetingId, prof.name + "-id")}
+                            className="p-0.5 rounded hover:bg-[hsl(var(--muted))] transition-colors"
+                          >
+                            <Copy className="h-2.5 w-2.5 text-[hsl(var(--muted-foreground))]" />
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-[hsl(var(--muted-foreground))]">
+                            Pass: {prof.passcode}
+                          </span>
+                          <button
+                            onClick={() => copyToClipboard(prof.passcode, prof.name + "-pass")}
+                            className="p-0.5 rounded hover:bg-[hsl(var(--muted))] transition-colors"
+                          >
+                            <Copy className="h-2.5 w-2.5 text-[hsl(var(--muted-foreground))]" />
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[9px] text-[hsl(var(--muted-foreground))]">
+                            Recording pwd:
+                          </span>
+                          <span className="text-[9px] font-mono" style={{ color }}>
+                            {prof.recordingPassword}
+                          </span>
+                          <button
+                            onClick={() => copyToClipboard(prof.recordingPassword, prof.name + "-rec")}
+                            className="p-0.5 rounded hover:bg-[hsl(var(--muted))] transition-colors"
+                          >
+                            <Copy className="h-2.5 w-2.5 text-[hsl(var(--muted-foreground))]" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Office Hours */}
+                      <div>
+                        <p className="text-[9px] text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-0.5">
+                          🕐 Office Hours
+                        </p>
+                        <p className="text-[11px] text-[hsl(var(--foreground))]">{prof.officeHours}</p>
+                      </div>
+
+                      {/* Tutors */}
+                      <div>
+                        <p className="text-[9px] text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-1">
+                          👥 Tutors
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {prof.tutors.map((tutor) => (
+                            <span
+                              key={tutor}
+                              className="text-[9px] px-1.5 py-0.5 rounded-full"
+                              style={{ backgroundColor: color + "22", color }}
+                            >
+                              {tutor}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Copy confirmation */}
+                      {copied && copied.startsWith(prof.name) && (
+                        <p className="text-[9px] text-green-500">✓ Copied to clipboard!</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* ── SECTION 2: Quick Links ── */}
+      <div>
+        <p className="text-[10px] font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-2">
+          🔗 Quick Links
+        </p>
+        <div className="flex flex-col gap-1.5">
+          {QUICK_LINKS.map((link) => (
+            <button
+              key={link.id}
+              onClick={() => window.open(link.url, "_blank")}
+              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-left hover:bg-[hsl(var(--muted))] transition-colors w-full border border-border"
+            >
+              <span className="text-[hsl(var(--primary))] shrink-0">
+                {getLinkIcon(link.icon)}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-[hsl(var(--foreground))] truncate">
+                  {link.label}
+                </p>
+                <p className="text-[10px] text-[hsl(var(--muted-foreground))] truncate">
+                  {link.description}
+                </p>
+              </div>
+              <ExternalLink className="h-3 w-3 text-[hsl(var(--muted-foreground))] shrink-0" />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── SECTION 3: Personal Notes ── */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[10px] font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
+            📝 My Notes · {activeTerm}
+          </p>
           <button
-            key={item.id}
-            onClick={() => window.open(href, "_blank")}
-            className="flex items-center gap-2.5 rounded-lg p-2.5 text-left hover:bg-[hsl(var(--muted))] transition-colors w-full"
+            onClick={() => setAddingNote(true)}
+            className="flex items-center gap-1 text-[10px] font-medium px-2 py-1 rounded-md bg-[hsl(var(--primary)/0.15)] text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary)/0.25)] transition-colors"
           >
-            <Icon className="h-3.5 w-3.5 shrink-0 text-[hsl(var(--primary))]" />
-            <div className="min-w-0">
-              <p className="text-xs font-medium truncate">{item.label}</p>
-              <p className="text-[10px] text-[hsl(var(--muted-foreground))] mt-0.5 truncate">{item.value}</p>
-            </div>
+            <Plus className="h-3 w-3" /> Add Note
           </button>
-        )
-      })}
+        </div>
+
+        {/* Add note input */}
+        {addingNote && (
+          <div className="mb-2 rounded-lg border border-[hsl(var(--primary)/0.3)] bg-[hsl(var(--card))] p-2.5">
+            <textarea
+              value={newNote}
+              onChange={(e) => setNewNote(e.target.value)}
+              placeholder="Write your note..."
+              className="w-full bg-transparent text-xs text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] outline-none resize-none"
+              rows={3}
+              autoFocus
+            />
+            <div className="flex items-center gap-2 mt-2">
+              <button
+                onClick={addNote}
+                className="text-[10px] font-medium px-2.5 py-1 rounded-md bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity"
+              >
+                Save
+              </button>
+              <button
+                onClick={() => { setAddingNote(false); setNewNote("") }}
+                className="text-[10px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Notes list */}
+        {notes.length === 0 && !addingNote ? (
+          <p className="text-[10px] text-[hsl(var(--muted-foreground))] italic">
+            No notes yet. Click "Add Note" to create one.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            {notes.map((note) => (
+              <div
+                key={note.id}
+                className="group rounded-lg border border-border bg-[hsl(var(--card))] px-3 py-2 flex items-start justify-between gap-2"
+              >
+                <div className="min-w-0">
+                  <p className="text-xs text-[hsl(var(--foreground))] leading-relaxed whitespace-pre-wrap">
+                    {note.content}
+                  </p>
+                  <p className="text-[9px] text-[hsl(var(--muted-foreground))] mt-1">
+                    {new Date(note.createdAt).toLocaleDateString("en-GB", {
+                      day: "numeric", month: "short", year: "numeric",
+                      hour: "2-digit", minute: "2-digit"
+                    })}
+                  </p>
+                </div>
+                <button
+                  onClick={() => deleteNote(note.id)}
+                  className="opacity-0 group-hover:opacity-100 text-[hsl(var(--muted-foreground))] hover:text-red-400 transition-all shrink-0 mt-0.5"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

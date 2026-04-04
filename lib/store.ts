@@ -1,5 +1,18 @@
 // Shared types and initial data for OPIT Tracker
 
+import {
+  initialAssessments,
+  initialPractices,
+  initialGrades,
+  initialMiscItems,
+  initialAttendance,
+  TERM_COURSES,
+  TERM_PROFESSORS,
+  QUICK_LINKS,
+  type Term,
+  type Course,
+} from "@/lib/store"
+
 export type Term = "Term 1" | "Term 2" | "Term 3" | "Term 4" | "Term 5" | "Term 6"
 
 export type SidebarSection = "assessments" | "practices" | "grades" | "misc" | "attendance" | "courses"
@@ -61,6 +74,139 @@ export interface CalendarEvent {
   type: "deadline" | "class" | "exam" | "meeting"
   time?: string
 }
+
+// ── Misc / Hub types ──────────────────────────────────────────────────────
+
+export interface Professor {
+  name: string
+  email: string
+  courseCode: string
+  courseName: string
+  liveSessions: string
+  meetingId: string
+  passcode: string
+  recordingPassword: string
+  officeHours: string
+  tutors: string[]
+}
+
+export interface QuickLink {
+  id: string
+  label: string
+  url: string
+  icon: "canvas" | "portal" | "library" | "link" | "rules" | "support"
+  description: string
+}
+
+export const TERM_PROFESSORS: Record<string, Professor[]> = {
+  "Term 2": [
+    {
+      name: "Maha Youssef",
+      email: "maha.youssef@faculty.opit.com",
+      courseCode: "COMP-2001",
+      courseName: "Foundational Mathematics",
+      liveSessions: "Tuesdays 14:00–15:30 (Malta)",
+      meetingId: "816 6402 9631",
+      passcode: "004881",
+      recordingPassword: "COMP-2001-2026intake",
+      officeHours: "Even weeks (2,4,6,8,10,12) · Fridays 12:00–13:00 (Malta)",
+      tutors: ["Durba Srivastava", "Sonam Bhardwaj", "Appurwa Saxena"],
+    },
+    {
+      name: "Filip Biały",
+      email: "filip.bialy@faculty.opit.com",
+      courseCode: "COMP-2002",
+      courseName: "Web Development",
+      liveSessions: "Wednesdays 13:30–15:00 (Malta)",
+      meetingId: "876 4901 1539",
+      passcode: "920406",
+      recordingPassword: "COMP-2002-2026intake",
+      officeHours: "Even weeks (2,4,6,8,10,12) · Wednesdays 12:30–13:00 (Malta)",
+      tutors: ["Yash Kumar", "Durba Srivastava", "Sugandha Rathi"],
+    },
+    {
+      name: "John Gordon Loewen",
+      email: "loewen.j@faculty.opit.com",
+      courseCode: "COMP-2003",
+      courseName: "Introduction to Operating Systems",
+      liveSessions: "Thursdays 13:30–15:00 (Malta)",
+      meetingId: "824 6899 4456",
+      passcode: "330846",
+      recordingPassword: "COMP-2003-2026intake",
+      officeHours: "Even weeks (2,4,6,8,10,12) · Thursdays 15:00–16:00 (Malta)",
+      tutors: ["Appurwa Saxena", "Durba Srivastava", "Shivangi Govil"],
+    },
+    {
+      name: "Raj Dasgupta",
+      email: "raj.dasgupta@faculty.opit.com",
+      courseCode: "COMP-2004",
+      courseName: "Data Structures and Algorithms",
+      liveSessions: "Saturdays 13:00–14:30 (Malta)",
+      meetingId: "880 1538 2321",
+      passcode: "041676",
+      recordingPassword: "COMP-2004-2026intake",
+      officeHours: "Even weeks (2,4,6,8,10,12) · Wednesdays 12:00–13:00 (Malta)",
+      tutors: ["Yash Raj Verma", "Shivangi Govil", "Arush Kaushal"],
+    },
+    {
+      name: "Azadeh Haratiannezhadi",
+      email: "azadeh.haratian@faculty.opit.com",
+      courseCode: "COMP-2005",
+      courseName: "Project Management and QA",
+      liveSessions: "Tuesdays 18:30–20:00 (Malta)",
+      meetingId: "878 9523 2809",
+      passcode: "725717",
+      recordingPassword: "COMP-2005-2026intake",
+      officeHours: "Even weeks (2,4,6,8,10,12) · Mondays 18:00–19:00 (Malta)",
+      tutors: ["Shivangi Govil", "Ankita Shukla", "Durba Srivastava"],
+    },
+  ],
+}
+
+export const QUICK_LINKS: QuickLink[] = [
+  {
+    id: "ql-1",
+    label: "Canvas LMS",
+    url: "https://opit.instructure.com/",
+    icon: "canvas",
+    description: "Courses, assignments & grades",
+  },
+  {
+    id: "ql-2",
+    label: "OPIT Student Portal",
+    url: "https://opit.classter.com/",
+    icon: "portal",
+    description: "Student administration portal",
+  },
+  {
+    id: "ql-3",
+    label: "O'Reilly Library",
+    url: "https://www.oreilly.com/library-access/",
+    icon: "library",
+    description: "Books, courses & learning resources",
+  },
+  {
+    id: "ql-4",
+    label: "Student Handbook",
+    url: "https://opit.instructure.com/courses/153/assignments/6813",
+    icon: "rules",
+    description: "Assessment & submission guidelines",
+  },
+  {
+    id: "ql-5",
+    label: "OPIT Regulations",
+    url: "https://opit.instructure.com/courses/153/pages/opit-regulations",
+    icon: "rules",
+    description: "Academic rules & policies",
+  },
+  {
+    id: "ql-6",
+    label: "Student Support Team",
+    url: "https://opit.instructure.com/courses/153/pages/meet-the-student-support-team?module_item_id=41404",
+    icon: "support",
+    description: "Meet your support contacts",
+  },
+]
 
 export const TERMS: Term[] = ["Term 1", "Term 2", "Term 3", "Term 4", "Term 5", "Term 6"]
 
