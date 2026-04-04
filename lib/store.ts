@@ -1,18 +1,5 @@
 // Shared types and initial data for OPIT Tracker
 
-import {
-  initialAssessments,
-  initialPractices,
-  initialGrades,
-  initialMiscItems,
-  initialAttendance,
-  TERM_COURSES,
-  TERM_PROFESSORS,
-  QUICK_LINKS,
-  type Term,
-  type Course,
-} from "@/lib/store"
-
 export type Term = "Term 1" | "Term 2" | "Term 3" | "Term 4" | "Term 5" | "Term 6"
 
 export type SidebarSection = "assessments" | "practices" | "grades" | "misc" | "attendance" | "courses"
@@ -164,48 +151,12 @@ export const TERM_PROFESSORS: Record<string, Professor[]> = {
 }
 
 export const QUICK_LINKS: QuickLink[] = [
-  {
-    id: "ql-1",
-    label: "Canvas LMS",
-    url: "https://opit.instructure.com/",
-    icon: "canvas",
-    description: "Courses, assignments & grades",
-  },
-  {
-    id: "ql-2",
-    label: "OPIT Student Portal",
-    url: "https://opit.classter.com/",
-    icon: "portal",
-    description: "Student administration portal",
-  },
-  {
-    id: "ql-3",
-    label: "O'Reilly Library",
-    url: "https://www.oreilly.com/library-access/",
-    icon: "library",
-    description: "Books, courses & learning resources",
-  },
-  {
-    id: "ql-4",
-    label: "Student Handbook",
-    url: "https://opit.instructure.com/courses/153/assignments/6813",
-    icon: "rules",
-    description: "Assessment & submission guidelines",
-  },
-  {
-    id: "ql-5",
-    label: "OPIT Regulations",
-    url: "https://opit.instructure.com/courses/153/pages/opit-regulations",
-    icon: "rules",
-    description: "Academic rules & policies",
-  },
-  {
-    id: "ql-6",
-    label: "Student Support Team",
-    url: "https://opit.instructure.com/courses/153/pages/meet-the-student-support-team?module_item_id=41404",
-    icon: "support",
-    description: "Meet your support contacts",
-  },
+  { id: "ql-1", label: "Canvas LMS",          url: "https://opit.instructure.com/",                                                                                    icon: "canvas",  description: "Courses, assignments & grades" },
+  { id: "ql-2", label: "OPIT Student Portal",  url: "https://opit.classter.com/",                                                                                      icon: "portal",  description: "Student administration portal" },
+  { id: "ql-3", label: "O'Reilly Library",     url: "https://www.oreilly.com/library-access/",                                                                         icon: "library", description: "Books, courses & learning resources" },
+  { id: "ql-4", label: "Student Handbook",     url: "https://opit.instructure.com/courses/153/assignments/6813",                                                        icon: "rules",   description: "Assessment & submission guidelines" },
+  { id: "ql-5", label: "OPIT Regulations",     url: "https://opit.instructure.com/courses/153/pages/opit-regulations",                                                  icon: "rules",   description: "Academic rules & policies" },
+  { id: "ql-6", label: "Student Support Team", url: "https://opit.instructure.com/courses/153/pages/meet-the-student-support-team?module_item_id=41404",                icon: "support", description: "Meet your support contacts" },
 ]
 
 export const TERMS: Term[] = ["Term 1", "Term 2", "Term 3", "Term 4", "Term 5", "Term 6"]
@@ -227,7 +178,6 @@ export const initialAssessments: Assessment[] = [
   { id: "t2-e1", title: "Assessment 1", courseCode: "COMP-2004", course: "Data Structure and Algorithms",      deadline: "Feb 14", weight: "35%", status: "todo" },
   { id: "t2-e2", title: "Assessment 2", courseCode: "COMP-2004", course: "Data Structure and Algorithms",      deadline: "Mar 14", weight: "35%", status: "todo" },
   { id: "t2-e3", title: "Assessment 3", courseCode: "COMP-2004", course: "Data Structure and Algorithms",      deadline: "Apr 12", weight: "30%", status: "todo" },
-
   // ── TERM 3 ──────────────────────────────────────────────────────────────
   { id: "t3-a1", title: "Assessment 1", courseCode: "COMP-3001", course: "Intro to Artificial Intelligence",   deadline: "TBD", weight: "TBD", status: "todo" },
   { id: "t3-a2", title: "Assessment 2", courseCode: "COMP-3001", course: "Intro to Artificial Intelligence",   deadline: "TBD", weight: "TBD", status: "todo" },
@@ -239,7 +189,6 @@ export const initialAssessments: Assessment[] = [
   { id: "t3-d2", title: "Assessment 2", courseCode: "COMP-3004", course: "Business Strategy",                  deadline: "TBD", weight: "TBD", status: "todo" },
   { id: "t3-e1", title: "Assessment 1", courseCode: "COMP-3005", course: "Programming Paradigms",              deadline: "TBD", weight: "TBD", status: "todo" },
   { id: "t3-e2", title: "Assessment 2", courseCode: "COMP-3005", course: "Programming Paradigms",              deadline: "TBD", weight: "TBD", status: "todo" },
-
   // ── TERM 4 ──────────────────────────────────────────────────────────────
   { id: "t4-a1", title: "Assessment 1", courseCode: "COMP-4001", course: "Introduction to Machine Learning",      deadline: "TBD", weight: "TBD", status: "todo" },
   { id: "t4-a2", title: "Assessment 2", courseCode: "COMP-4001", course: "Introduction to Machine Learning",      deadline: "TBD", weight: "TBD", status: "todo" },
@@ -251,7 +200,6 @@ export const initialAssessments: Assessment[] = [
   { id: "t4-d2", title: "Assessment 2", courseCode: "COMP-4004", course: "Cloud Development",                     deadline: "TBD", weight: "TBD", status: "todo" },
   { id: "t4-e1", title: "Assessment 1", courseCode: "COMP-4005", course: "Digital Marketing",                     deadline: "TBD", weight: "TBD", status: "todo" },
   { id: "t4-e2", title: "Assessment 2", courseCode: "COMP-4005", course: "Digital Marketing",                     deadline: "TBD", weight: "TBD", status: "todo" },
-
   // ── TERM 6 ──────────────────────────────────────────────────────────────
   { id: "t6-a1", title: "Dissertation / Internship", courseCode: "COMP-6001", course: "Dissertation — Internship", deadline: "TBD", weight: "100%", status: "todo" },
 ]
@@ -270,18 +218,17 @@ export const initialPractices: Practice[] = [
   { id: "p-2001-q10", courseCode: "COMP-2001", course: "Foundational Mathematics", type: "quiz", title: "Practice Quiz 10", completed: false },
   { id: "p-2001-q11", courseCode: "COMP-2001", course: "Foundational Mathematics", type: "quiz", title: "Practice Quiz 11", completed: false },
   { id: "p-2001-q12", courseCode: "COMP-2001", course: "Foundational Mathematics", type: "quiz", title: "Practice Quiz 12", completed: false },
-
   // ── COMP-2002 Web Development — 10 Quizzes + 10 Assignments ───────────
-  { id: "p-2002-q1",  courseCode: "COMP-2002", course: "Web Development", type: "quiz", title: "Practice Quiz 1",  completed: false },
-  { id: "p-2002-q2",  courseCode: "COMP-2002", course: "Web Development", type: "quiz", title: "Practice Quiz 2",  completed: false },
-  { id: "p-2002-q3",  courseCode: "COMP-2002", course: "Web Development", type: "quiz", title: "Practice Quiz 3",  completed: false },
-  { id: "p-2002-q4",  courseCode: "COMP-2002", course: "Web Development", type: "quiz", title: "Practice Quiz 4",  completed: false },
-  { id: "p-2002-q5",  courseCode: "COMP-2002", course: "Web Development", type: "quiz", title: "Practice Quiz 5",  completed: false },
-  { id: "p-2002-q6",  courseCode: "COMP-2002", course: "Web Development", type: "quiz", title: "Practice Quiz 6",  completed: false },
-  { id: "p-2002-q7",  courseCode: "COMP-2002", course: "Web Development", type: "quiz", title: "Practice Quiz 7",  completed: false },
-  { id: "p-2002-q8",  courseCode: "COMP-2002", course: "Web Development", type: "quiz", title: "Practice Quiz 8",  completed: false },
-  { id: "p-2002-q9",  courseCode: "COMP-2002", course: "Web Development", type: "quiz", title: "Practice Quiz 9",  completed: false },
-  { id: "p-2002-q10", courseCode: "COMP-2002", course: "Web Development", type: "quiz", title: "Practice Quiz 10", completed: false },
+  { id: "p-2002-q1",  courseCode: "COMP-2002", course: "Web Development", type: "quiz",       title: "Practice Quiz 1",        completed: false },
+  { id: "p-2002-q2",  courseCode: "COMP-2002", course: "Web Development", type: "quiz",       title: "Practice Quiz 2",        completed: false },
+  { id: "p-2002-q3",  courseCode: "COMP-2002", course: "Web Development", type: "quiz",       title: "Practice Quiz 3",        completed: false },
+  { id: "p-2002-q4",  courseCode: "COMP-2002", course: "Web Development", type: "quiz",       title: "Practice Quiz 4",        completed: false },
+  { id: "p-2002-q5",  courseCode: "COMP-2002", course: "Web Development", type: "quiz",       title: "Practice Quiz 5",        completed: false },
+  { id: "p-2002-q6",  courseCode: "COMP-2002", course: "Web Development", type: "quiz",       title: "Practice Quiz 6",        completed: false },
+  { id: "p-2002-q7",  courseCode: "COMP-2002", course: "Web Development", type: "quiz",       title: "Practice Quiz 7",        completed: false },
+  { id: "p-2002-q8",  courseCode: "COMP-2002", course: "Web Development", type: "quiz",       title: "Practice Quiz 8",        completed: false },
+  { id: "p-2002-q9",  courseCode: "COMP-2002", course: "Web Development", type: "quiz",       title: "Practice Quiz 9",        completed: false },
+  { id: "p-2002-q10", courseCode: "COMP-2002", course: "Web Development", type: "quiz",       title: "Practice Quiz 10",       completed: false },
   { id: "p-2002-a1",  courseCode: "COMP-2002", course: "Web Development", type: "assignment", title: "Practice Assignment 1",  completed: false },
   { id: "p-2002-a2",  courseCode: "COMP-2002", course: "Web Development", type: "assignment", title: "Practice Assignment 2",  completed: false },
   { id: "p-2002-a3",  courseCode: "COMP-2002", course: "Web Development", type: "assignment", title: "Practice Assignment 3",  completed: false },
@@ -292,7 +239,6 @@ export const initialPractices: Practice[] = [
   { id: "p-2002-a8",  courseCode: "COMP-2002", course: "Web Development", type: "assignment", title: "Practice Assignment 8",  completed: false },
   { id: "p-2002-a9",  courseCode: "COMP-2002", course: "Web Development", type: "assignment", title: "Practice Assignment 9",  completed: false },
   { id: "p-2002-a10", courseCode: "COMP-2002", course: "Web Development", type: "assignment", title: "Practice Assignment 10", completed: false },
-
   // ── COMP-2003 Operating Systems — 12 Practice Quizzes ─────────────────
   { id: "p-2003-q1",  courseCode: "COMP-2003", course: "Introduction to Operating Systems", type: "quiz", title: "Practice Quiz 1",  completed: false },
   { id: "p-2003-q2",  courseCode: "COMP-2003", course: "Introduction to Operating Systems", type: "quiz", title: "Practice Quiz 2",  completed: false },
@@ -306,13 +252,11 @@ export const initialPractices: Practice[] = [
   { id: "p-2003-q10", courseCode: "COMP-2003", course: "Introduction to Operating Systems", type: "quiz", title: "Practice Quiz 10", completed: false },
   { id: "p-2003-q11", courseCode: "COMP-2003", course: "Introduction to Operating Systems", type: "quiz", title: "Practice Quiz 11", completed: false },
   { id: "p-2003-q12", courseCode: "COMP-2003", course: "Introduction to Operating Systems", type: "quiz", title: "Practice Quiz 12", completed: false },
-
   // ── COMP-2004 Data Structures & Algorithms — 4 Practice Quizzes ───────
   { id: "p-2004-q1", courseCode: "COMP-2004", course: "Data Structure and Algorithms", type: "quiz", title: "Practice Quiz 1", completed: false },
   { id: "p-2004-q2", courseCode: "COMP-2004", course: "Data Structure and Algorithms", type: "quiz", title: "Practice Quiz 2", completed: false },
   { id: "p-2004-q3", courseCode: "COMP-2004", course: "Data Structure and Algorithms", type: "quiz", title: "Practice Quiz 3", completed: false },
   { id: "p-2004-q4", courseCode: "COMP-2004", course: "Data Structure and Algorithms", type: "quiz", title: "Practice Quiz 4", completed: false },
-
   // ── COMP-2005 Project Management & QA — 6 Practice Assignments ────────
   { id: "p-2005-a1", courseCode: "COMP-2005", course: "Project Management and QA", type: "assignment", title: "Practice Assignment 1", completed: false },
   { id: "p-2005-a2", courseCode: "COMP-2005", course: "Project Management and QA", type: "assignment", title: "Practice Assignment 2", completed: false },
@@ -330,11 +274,11 @@ export const initialGrades: Grade[] = [
 ]
 
 export const initialMiscItems: MiscItem[] = [
-  { id: "m1", label: "Prof. Smith Email",   value: "smith@opit.edu",                    type: "email" },
-  { id: "m2", label: "CS Lecture Zoom",     value: "https://zoom.us/j/123456789",       type: "zoom"  },
-  { id: "m3", label: "Math Office Hours",   value: "https://zoom.us/j/987654321",       type: "zoom"  },
-  { id: "m4", label: "Academic Advisor",    value: "advisor@opit.edu",                  type: "email" },
-  { id: "m5", label: "Library Portal",      value: "https://library.opit.edu",          type: "link"  },
+  { id: "m1", label: "Prof. Smith Email", value: "smith@opit.edu",              type: "email" },
+  { id: "m2", label: "CS Lecture Zoom",   value: "https://zoom.us/j/123456789", type: "zoom"  },
+  { id: "m3", label: "Math Office Hours", value: "https://zoom.us/j/987654321", type: "zoom"  },
+  { id: "m4", label: "Academic Advisor",  value: "advisor@opit.edu",            type: "email" },
+  { id: "m5", label: "Library Portal",    value: "https://library.opit.edu",    type: "link"  },
 ]
 
 export const initialAttendance: AttendanceRecord[] = [
@@ -347,12 +291,12 @@ export const initialAttendance: AttendanceRecord[] = [
 ]
 
 export const initialKanbanTasks: KanbanTask[] = [
-  { id: "k1", title: "Study Linear Algebra Ch.5",    course: "Mathematics",      type: "reading",    column: "todo"        },
-  { id: "k2", title: "Complete DS Project Part 2",   course: "Computer Science", type: "assessment", dueDate: "Feb 20", column: "todo"        },
-  { id: "k3", title: "Review SQL Joins",             course: "Database Systems", type: "practice",   column: "in-progress" },
-  { id: "k4", title: "Ethics Essay Draft",           course: "Philosophy",       type: "assessment", dueDate: "Feb 28", column: "in-progress" },
-  { id: "k5", title: "Probability Homework",         course: "Mathematics",      type: "practice",   column: "done"        },
-  { id: "k6", title: "Network Lab Report",           course: "Networking",       type: "other",      dueDate: "Mar 1",  column: "todo"        },
+  { id: "k1", title: "Study Linear Algebra Ch.5",  course: "Mathematics",      type: "reading",    column: "todo"        },
+  { id: "k2", title: "Complete DS Project Part 2", course: "Computer Science", type: "assessment", dueDate: "Feb 20", column: "todo"        },
+  { id: "k3", title: "Review SQL Joins",           course: "Database Systems", type: "practice",   column: "in-progress" },
+  { id: "k4", title: "Ethics Essay Draft",         course: "Philosophy",       type: "assessment", dueDate: "Feb 28", column: "in-progress" },
+  { id: "k5", title: "Probability Homework",       course: "Mathematics",      type: "practice",   column: "done"        },
+  { id: "k6", title: "Network Lab Report",         course: "Networking",       type: "other",      dueDate: "Mar 1",  column: "todo"        },
 ]
 
 export const initialCalendarEvents: CalendarEvent[] = [
@@ -397,42 +341,42 @@ export const TERM_COURSES: Record<Term, Course[]> = {
     { code: "COMP-3005", name: "Programming Paradigms",              color: "#DC2626" },
   ],
   "Term 4": [
-    { code: "COMP-4001", name: "Introduction to Machine Learning",       color: "#7C3AED" },
-    { code: "COMP-4002", name: "Introduction to Computer Security",      color: "#DC2626" },
-    { code: "COMP-4003", name: "Introduction to Software Engineering",   color: "#059669" },
-    { code: "COMP-4004", name: "Cloud Development",                      color: "#0891B2" },
-    { code: "COMP-4005", name: "Digital Marketing",                      color: "#D97706" },
+    { code: "COMP-4001", name: "Introduction to Machine Learning",      color: "#7C3AED" },
+    { code: "COMP-4002", name: "Introduction to Computer Security",     color: "#DC2626" },
+    { code: "COMP-4003", name: "Introduction to Software Engineering",  color: "#059669" },
+    { code: "COMP-4004", name: "Cloud Development",                     color: "#0891B2" },
+    { code: "COMP-4005", name: "Digital Marketing",                     color: "#D97706" },
   ],
   "Term 5": [
-    { code: "COMP-5001", name: "Cloud Computing Automation and Ops",     color: "#0891B2" },
-    { code: "COMP-5002", name: "Big Data Technologies",                  color: "#7C3AED" },
-    { code: "COMP-5003", name: "Cloud Architecture Paradigms",           color: "#6366F1" },
-    { code: "COMP-5004", name: "Cloud Data Stacks",                      color: "#059669" },
-    { code: "COMP-5005", name: "Cloud Adoption Frameworks",              color: "#0E7490" },
-    { code: "COMP-5006", name: "Cloud and IoT Security",                 color: "#DC2626" },
-    { code: "COMP-5007", name: "Cybersecurity",                          color: "#B91C1C" },
-    { code: "COMP-5008", name: "Generative AI in Cybersecurity",         color: "#9333EA" },
-    { code: "COMP-5009", name: "Cryptography & Secure Communications",   color: "#4F46E5" },
-    { code: "COMP-5010", name: "Network Security & Intrusion Detection", color: "#0F766E" },
-    { code: "COMP-5011", name: "Secure Software Development",            color: "#15803D" },
-    { code: "COMP-5012", name: "Reinforcement Learning",                 color: "#D97706" },
-    { code: "COMP-5013", name: "Machine Learning",                       color: "#CA8A04" },
-    { code: "COMP-5014", name: "Complex Networks & Applications",        color: "#7C3AED" },
-    { code: "COMP-5015", name: "Computer Vision",                        color: "#0891B2" },
-    { code: "COMP-5016", name: "Ethics of Computer Science and AI",      color: "#059669" },
-    { code: "COMP-5017", name: "Natural Language Processing",            color: "#6366F1" },
-    { code: "COMP-5018", name: "Game Development",                       color: "#DC2626" },
-    { code: "COMP-5019", name: "Project Methodology & V Communication",  color: "#D97706" },
+    { code: "COMP-5001", name: "Cloud Computing Automation and Ops",      color: "#0891B2" },
+    { code: "COMP-5002", name: "Big Data Technologies",                   color: "#7C3AED" },
+    { code: "COMP-5003", name: "Cloud Architecture Paradigms",            color: "#6366F1" },
+    { code: "COMP-5004", name: "Cloud Data Stacks",                       color: "#059669" },
+    { code: "COMP-5005", name: "Cloud Adoption Frameworks",               color: "#0E7490" },
+    { code: "COMP-5006", name: "Cloud and IoT Security",                  color: "#DC2626" },
+    { code: "COMP-5007", name: "Cybersecurity",                           color: "#B91C1C" },
+    { code: "COMP-5008", name: "Generative AI in Cybersecurity",          color: "#9333EA" },
+    { code: "COMP-5009", name: "Cryptography & Secure Communications",    color: "#4F46E5" },
+    { code: "COMP-5010", name: "Network Security & Intrusion Detection",  color: "#0F766E" },
+    { code: "COMP-5011", name: "Secure Software Development",             color: "#15803D" },
+    { code: "COMP-5012", name: "Reinforcement Learning",                  color: "#D97706" },
+    { code: "COMP-5013", name: "Machine Learning",                        color: "#CA8A04" },
+    { code: "COMP-5014", name: "Complex Networks & Applications",         color: "#7C3AED" },
+    { code: "COMP-5015", name: "Computer Vision",                         color: "#0891B2" },
+    { code: "COMP-5016", name: "Ethics of Computer Science and AI",       color: "#059669" },
+    { code: "COMP-5017", name: "Natural Language Processing",             color: "#6366F1" },
+    { code: "COMP-5018", name: "Game Development",                        color: "#DC2626" },
+    { code: "COMP-5019", name: "Project Methodology & V Communication",   color: "#D97706" },
     { code: "COMP-5020", name: "Digital Application for Digital Environments", color: "#0F766E" },
-    { code: "COMP-5021", name: "Digital Video, VFX and Virtual Reality", color: "#9333EA" },
-    { code: "COMP-5022", name: "Sensors and Devices for VAX Reality",    color: "#4F46E5" },
-    { code: "COMP-5023", name: "Leadership & Business Dev for Metaverse",color: "#B45309" },
-    { code: "COMP-5024", name: "Parallel and Distributed Computing",     color: "#15803D" },
-    { code: "COMP-5025", name: "Front-end Programming",                  color: "#059669" },
-    { code: "COMP-5026", name: "Mobile Programming",                     color: "#0891B2" },
-    { code: "COMP-5027", name: "Software Engineering",                   color: "#7C3AED" },
+    { code: "COMP-5021", name: "Digital Video, VFX and Virtual Reality",  color: "#9333EA" },
+    { code: "COMP-5022", name: "Sensors and Devices for VAX Reality",     color: "#4F46E5" },
+    { code: "COMP-5023", name: "Leadership & Business Dev for Metaverse", color: "#B45309" },
+    { code: "COMP-5024", name: "Parallel and Distributed Computing",      color: "#15803D" },
+    { code: "COMP-5025", name: "Front-end Programming",                   color: "#059669" },
+    { code: "COMP-5026", name: "Mobile Programming",                      color: "#0891B2" },
+    { code: "COMP-5027", name: "Software Engineering",                    color: "#7C3AED" },
   ],
   "Term 6": [
-    { code: "COMP-6001", name: "Dissertation — Internship",              color: "#059669" },
+    { code: "COMP-6001", name: "Dissertation — Internship", color: "#059669" },
   ],
 }
