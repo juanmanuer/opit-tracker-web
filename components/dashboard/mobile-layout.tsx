@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useActiveTerm } from "@/hooks/use-active-term"
 import { cn } from "@/lib/utils"
 import { useSession, signOut } from "next-auth/react"
 import { useTheme } from "next-themes"
@@ -37,8 +38,7 @@ const viewTabs: { key: MainView; label: string; icon: typeof BarChart2 }[] = [
 ]
 
 export function MobileLayout() {
-  const [activeTerm, setActiveTerm] = useState<Term>("Term 2")
-  const [activeSection, setActiveSection] = useState<SidebarSection>("assessments")
+  const [activeTerm, setActiveTerm] = useActiveTerm()  const [activeSection, setActiveSection] = useState<SidebarSection>("assessments")
   const [mainView, setMainView] = useState<MainView>("dashboard")
   const [screen, setScreen] = useState<"section" | "main">("main")
   const [showTermPicker, setShowTermPicker] = useState(false)

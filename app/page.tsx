@@ -3,6 +3,7 @@
 export const dynamic = "force-dynamic"
 
 import React, { useState } from "react"
+import { useActiveTerm } from "@/hooks/use-active-term"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { TopNav } from "@/components/dashboard/top-nav"
 import { KanbanBoard } from "@/components/dashboard/kanban-board"
@@ -20,7 +21,7 @@ import { cn } from "@/lib/utils"
 
 export default function Page() {
   const isMobile = useIsMobile()
-  const [activeTerm, setActiveTerm] = useState<Term>("Term 2")
+const [activeTerm, setActiveTerm] = useActiveTerm()
   const [activeSection, setActiveSection] = useState<SidebarSection>("assessments")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mainView, setMainView] = useState<"dashboard" | "kanban" | "calendar">("dashboard")

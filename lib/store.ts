@@ -223,6 +223,9 @@ export const QUICK_LINKS: QuickLink[] = [
 
 export const TERMS: Term[] = ["Term 1", "Term 2", "Term 3", "Term 4", "Term 5", "Term 6"]
 
+// Term shown the first time the app is opened (update each new term)
+export const DEFAULT_TERM: Term = "Term 3"
+
 export const initialAssessments: Assessment[] = [
   // ── TERM 2 ──────────────────────────────────────────────────────────────
   { id: "t2-a1", title: "Assessment 1", courseCode: "COMP-2001", course: "Foundational Mathematics",           deadline: "Feb 15", weight: "30%", status: "todo" },
