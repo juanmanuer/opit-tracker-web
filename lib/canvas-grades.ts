@@ -6,7 +6,7 @@ import { sql } from "@/lib/db"
 import { CANVAS_COURSE_IDS, GRADE_WEIGHTS } from "@/lib/grades"
 import { getCanvasToken } from "@/lib/canvas-token"
 
-export type CanvasAssessment = { idx: number; name: string; pct: number | null; gradedAt: string | null }
+export type CanvasAssessment = { idx: number; name: string; pct: number | null; gradedAt: string | null; dueAt?: string | null; unlockAt?: string | null; url?: string | null }
 export type CanvasCourse = {
   code: string
   assessments: CanvasAssessment[]                  // one per configured assessment (pct null = not graded)
@@ -52,7 +52,14 @@ export async function fetchCanvasTermGrades(term: string): Promise<CanvasCourse[
 
         const idx = assessmentIndex(name)
         if (idx === null || idx >= assessments.length || points <= 0) continue
-        assessments[idx] = { idx, name, pct: graded ? round1((s.score / points) * 100) : null, gradedAt: graded ? s.graded_at ?? null : null }
+        assessments[idx] = {
+          idx, name,
+          pct: graded ? round1((s.score / points) * 100) : null,
+          gradedAt: graded ? s.graded_at ?? null : null,
+          dueAt: s.assignment?.due_at ?? null,
+          unlockAt: s.assignment?.unlock_at ?? null,
+          url: s.assignment?.html_url ?? null,
+        }
       }
       return { code, assessments, bonus }
     } catch (err) {

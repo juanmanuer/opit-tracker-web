@@ -12,7 +12,7 @@ import { TodayView } from "@/components/app/today-view"
 import { CoursesView } from "@/components/app/courses-view"
 import { CommandPalette } from "@/components/app/command-palette"
 import { GradeCenter } from "@/components/dashboard/grade-center"
-import { CalendarView } from "@/components/dashboard/calendar-view"
+import { PlanView } from "@/components/app/plan-view"
 import { ExportButton } from "@/components/dashboard/export-button"
 
 export type View = "today" | "courses" | "grades" | "plan"
@@ -123,7 +123,7 @@ export function AppShell() {
           ) : view === "grades" ? (
             <GradeCenter key={term} embedded activeTerm={term} onDataChanged={academic.reload} />
           ) : (
-            <CalendarView />
+            <PlanView term={term} academic={academic} onOpenCourse={openCourse} />
           )}
         </main>
       </div>
