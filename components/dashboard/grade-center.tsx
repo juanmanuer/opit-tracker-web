@@ -6,7 +6,7 @@ import type { Term } from "@/lib/store"
 import { getGrade, courseStats } from "@/lib/grades"
 import { gradedTerms, termData, allPractices, type WeightSource } from "@/lib/catalog"
 import { useCatalog } from "@/components/app/catalog-gate"
-import { AlertSettings } from "@/components/app/alert-settings"
+import { AlertSettings, useAlertsAvailable } from "@/components/app/alert-settings"
 
 type Scores = Record<string, (number | null)[]>          // courseCode -> scores per assessment
 type Bonus = { live: boolean | null; practices: boolean | null }
@@ -31,6 +31,7 @@ function emptyScores(term: string): Scores {
 
 export function GradeCenter({ activeTerm, onClose, embedded = false, onDataChanged }: Props) {
   const { catalog, setCatalog } = useCatalog()
+  const alertsOk = useAlertsAvailable()
   const GRADED_TERMS = gradedTerms(catalog)
   const GRADE_WEIGHTS: Record<string, Record<string, number[]>> = Object.fromEntries(GRADED_TERMS.map(t => [t, termData(t, catalog).weights]))
   const defaultTerm = GRADE_WEIGHTS[activeTerm] ? activeTerm : GRADED_TERMS[GRADED_TERMS.length - 1]
@@ -308,7 +309,7 @@ export function GradeCenter({ activeTerm, onClose, embedded = false, onDataChang
           <div className="rounded-2xl bg-card border border-border p-4 flex flex-col gap-3">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <p className={`text-sm font-medium ${fg}`}>Canvas connection and alerts</p>
+                <p className={`text-sm font-medium ${fg}`}>{alertsOk ? "Canvas connection and alerts" : "Canvas connection"}</p>
                 <p className={`text-[11px] ${muted}`}>
                   {!token ? "Checking…"
                     : token.source === "database"
@@ -320,6 +321,7 @@ export function GradeCenter({ activeTerm, onClose, embedded = false, onDataChang
                 {token?.lastError && <p className="text-[11px] mt-1 text-[hsl(var(--destructive))]">{token.lastError}</p>}
               </div>
               <div className="flex gap-2">
+              {alertsOk && <>
               <button onClick={() => tokenAction({ action: "test-alert" }, "Test alert sent. Check your email and phone.")} disabled={tokenBusy}
                 className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))] disabled:opacity-50">
                 Send test alert
@@ -328,6 +330,7 @@ export function GradeCenter({ activeTerm, onClose, embedded = false, onDataChang
                 className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))] disabled:opacity-50">
                 Send weekly summary now
               </button>
+              </>}
               <button onClick={() => tokenAction({ action: "renew" }, "Renewed. Automatic renewal is on.")} disabled={tokenBusy || token?.source === "none"}
                 className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))] disabled:opacity-50">
                 <RefreshCw className={`h-3.5 w-3.5 ${tokenBusy ? "animate-spin" : ""}`} /> Renew now

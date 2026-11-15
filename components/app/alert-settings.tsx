@@ -4,11 +4,18 @@ import { useEffect, useState } from "react"
 
 
 // Each person's own alert channels (email + private ntfy topic for the phone)
+// Alerts are offered to the owner only, unless ALERTS_FOR_EVERYONE=true (see lib/users.ts)
+export function useAlertsAvailable() {
+  const [ok, setOk] = useState(false)
+  useEffect(() => { fetch("/api/user/settings").then(r => (r.ok ? r.json() : null)).then(s => setOk(!!s?.alertsAvailable)).catch(() => {}) }, [])
+  return ok
+}
+
 export function AlertSettings() {
-  const [s, setS] = useState<{ ntfyTopic: string; ntfyUrl: string; emailAlerts: boolean; pushAlerts: boolean } | null>(null)
+  const [s, setS] = useState<{ ntfyTopic: string; ntfyUrl: string; emailAlerts: boolean; pushAlerts: boolean; alertsAvailable: boolean } | null>(null)
   const [copied, setCopied] = useState(false)
   useEffect(() => { fetch("/api/user/settings").then(r => r.ok ? r.json() : null).then(setS).catch(() => {}) }, [])
-  if (!s) return null
+  if (!s || !s.alertsAvailable) return null
   const save = (patch: Partial<typeof s>) => {
     setS({ ...s, ...patch })
     fetch("/api/user/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) }).catch(() => {})

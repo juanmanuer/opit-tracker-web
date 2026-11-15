@@ -5,7 +5,7 @@ import { useState } from "react"
 import { useSession, signOut } from "next-auth/react"
 import { Download, Trash2, LogOut, RefreshCw } from "lucide-react"
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { AlertSettings } from "@/components/app/alert-settings"
+import { AlertSettings, useAlertsAvailable } from "@/components/app/alert-settings"
 import { useCatalog } from "@/components/app/catalog-gate"
 
 const muted = "text-[hsl(var(--muted-foreground))]"
@@ -19,6 +19,7 @@ export function AccountDialog({ open, onOpenChange }: { open: boolean; onOpenCha
   const [msg, setMsg] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const email = session?.user?.email ?? ""
+  const alertsOk = useAlertsAvailable()
 
   const reload = async () => {
     setBusy(true); setMsg("Reading your courses from Canvas…")
@@ -41,10 +42,12 @@ export function AccountDialog({ open, onOpenChange }: { open: boolean; onOpenCha
         <DialogTitle>Account</DialogTitle>
         <DialogDescription>{email} · {ROLE_LABEL[role] ?? role}</DialogDescription>
 
-        <section className="flex flex-col gap-2">
-          <p className="text-xs font-medium">Alerts</p>
-          <AlertSettings />
-        </section>
+        {alertsOk && (
+          <section className="flex flex-col gap-2">
+            <p className="text-xs font-medium">Alerts</p>
+            <AlertSettings />
+          </section>
+        )}
 
         <section className="flex flex-col gap-1.5">
           <p className="text-xs font-medium">Courses</p>

@@ -69,6 +69,11 @@ async function migrateSingleUser() {
   `
 }
 
+// Alerts (email + phone) are offered to everyone only when ALERTS_FOR_EVERYONE=true.
+// Until then only the owner (original user) has them; everyone else starts with them off.
+export const alertsForEveryone = () => process.env.ALERTS_FOR_EVERYONE === "true"
+export const alertsAvailableFor = (u: Pick<AppUser, "legacy_catalog">) => u.legacy_catalog || alertsForEveryone()
+
 const newTopic = () => `opit-${crypto.randomBytes(8).toString("hex")}`
 
 // Called on every sign-in. The original owner (the person whose Canvas token
@@ -82,8 +87,8 @@ export async function upsertUser(email: string, name?: string | null): Promise<A
     return existing
   }
   await sql`
-    INSERT INTO app_users (email, name, role, ntfy_topic)
-    VALUES (${e}, ${name ?? null}, ${roleFromEmail(e)}, ${newTopic()})
+    INSERT INTO app_users (email, name, role, ntfy_topic, email_alerts, push_alerts)
+    VALUES (${e}, ${name ?? null}, ${roleFromEmail(e)}, ${newTopic()}, ${alertsForEveryone()}, ${alertsForEveryone()})
     ON CONFLICT (email) DO NOTHING
   `
   return (await getUser(e))!

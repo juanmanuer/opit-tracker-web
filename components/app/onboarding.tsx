@@ -25,11 +25,12 @@ export function Onboarding() {
   const [role, setRole] = useState<Role>("student")
   const [initialRole, setInitialRole] = useState<Role>("student")
   const [test, setTest] = useState<string | null>(null)
+  const [alertsOk, setAlertsOk] = useState(false)
 
   useEffect(() => {
     fetch("/api/user/settings").then(r => (r.ok ? r.json() : null)).then(s => {
       if (!s || s.onboarded || s.builtInCourses) return
-      setRole(s.role); setInitialRole(s.role); setOpen(true)
+      setRole(s.role); setInitialRole(s.role); setAlertsOk(!!s.alertsAvailable); setOpen(true)
     }).catch(() => {})
   }, [])
 
@@ -94,10 +95,10 @@ export function Onboarding() {
         </>}
 
         <div className="flex items-center gap-2 mt-3">
-          {step > 0 && <button onClick={() => setStep(step === 2 && role !== "student" ? 0 : step - 1)} className={`text-xs ${muted} hover:underline`}>Back</button>}
+          {step > 0 && <button onClick={() => setStep(step === 2 && (role !== "student" || !alertsOk) ? 0 : step - 1)} className={`text-xs ${muted} hover:underline`}>Back</button>}
           <button onClick={finish} className={`text-xs ${muted} hover:underline ml-auto`}>Skip</button>
           {/* phone alerts are for students; professors and staff skip that step */}
-          <button onClick={() => (step < 2 ? setStep(step === 0 && role !== "student" ? 2 : step + 1) : finish())}
+          <button onClick={() => (step < 2 ? setStep(step === 0 && (role !== "student" || !alertsOk) ? 2 : step + 1) : finish())}
             className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]">
             {step < 2 ? <>Next <ArrowRight className="h-4 w-4" /></> : <>Done <Check className="h-4 w-4" /></>}
           </button>
