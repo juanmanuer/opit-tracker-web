@@ -457,11 +457,11 @@ export const TERM_COURSES: Record<Term, Course[]> = {
     { code: "COMP-2005", name: "Project Management and QA",          color: "#7C3AED" },
   ],
   "Term 3": [
-    { code: "COMP-3001", name: "Introduction to Databases",          color: "#0891B2" },
-    { code: "COMP-3002", name: "Cloud Computing Infrastructure",     color: "#059669" },
-    { code: "COMP-3003", name: "Programming Paradigms",              color: "#6366F1" },
-    { code: "COMP-3004", name: "Intro to Artificial Intelligence",   color: "#D97706" },
-    { code: "COMP-3005", name: "Business Strategy",                  color: "#DC2626" },
+    { code: "COMP-3001", name: "Introduction to Databases",          color: "#DC2626" }, // red
+    { code: "COMP-3002", name: "Cloud Computing Infrastructure",     color: "#2563EB" }, // blue
+    { code: "COMP-3003", name: "Programming Paradigms",              color: "#EA580C" }, // orange
+    { code: "COMP-3004", name: "Intro to Artificial Intelligence",   color: "#7C3AED" }, // purple
+    { code: "COMP-3005", name: "Business Strategy",                  color: "#16A34A" }, // green
   ],
   "Term 4": [
     { code: "COMP-4001", name: "Introduction to Machine Learning",      color: "#7C3AED" },

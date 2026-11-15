@@ -36,18 +36,26 @@ export function CoursesView({ term, academic, course, onSelectCourse }: {
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Course chips */}
-      <div className="flex flex-wrap gap-1.5">
+      {/* Course chips — each tinted with its course colour, selected one solid */}
+      <div className="flex flex-wrap gap-2">
         {courses.map(c => {
           const cr = courseResult(state, term, c.code)
           const active = c.code === selected.code
           return (
             <button key={c.code} onClick={() => onSelectCourse(c.code)}
-              className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg border transition-colors ${active ? "font-medium" : `border-border hover:bg-[hsl(var(--muted))] ${muted}`}`}
-              style={active ? { borderColor: c.color, backgroundColor: c.color + "1f", color: c.color } : undefined}>
+              className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-xl border transition-all ${active ? "font-semibold shadow-sm scale-[1.03]" : "font-medium hover:brightness-110"}`}
+              style={active
+                ? { backgroundColor: c.color, borderColor: c.color, color: "#fff" }
+                : { backgroundColor: c.color + "14", borderColor: c.color + "55", color: c.color }}>
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: active ? "#fff" : c.color }} />
               <span className="font-mono">{c.code.split("-")[1]}</span>
               <span className="hidden sm:inline">{c.name}</span>
-              {cr.total !== null && <span className="text-[10px] font-semibold">{cr.total.toFixed(0)}</span>}
+              {cr.total !== null && (
+                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md"
+                  style={active ? { backgroundColor: "rgba(255,255,255,0.22)" } : { backgroundColor: c.color + "22" }}>
+                  {cr.total.toFixed(0)}
+                </span>
+              )}
             </button>
           )
         })}
