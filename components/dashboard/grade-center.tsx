@@ -1,11 +1,13 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { X, RefreshCw, Target, Award, ChevronDown, PieChart, KeyRound } from "lucide-react"
-import { TERM_COURSES, type Term } from "@/lib/store"
+import { X, RefreshCw, Target, Award, ChevronDown, PieChart, KeyRound, Radio, CheckSquare } from "lucide-react"
+import { TERM_COURSES, initialPractices, type Term } from "@/lib/store"
 import { GRADE_WEIGHTS, GRADED_TERMS, getGrade, courseStats } from "@/lib/grades"
 
 type Scores = Record<string, (number | null)[]>          // courseCode -> scores per assessment
+type Bonus = { live: boolean | null; practices: boolean | null }
+type Conflict = { courseCode: string; idx: number; name: string; canvas: number; app: number }
 type TokenStatus = { source: "database" | "env" | "none"; expiresAt: string | null; daysLeft: number | null; lastRenewed: string | null; lastError: string | null }
 type CanvasInfo = { courseCode: string; gradeInfo: { currentScore?: number | null } | null; error?: string | null }
 
@@ -23,15 +25,20 @@ function emptyScores(term: string): Scores {
 }
 
 export function GradeCenter({ activeTerm, onClose }: Props) {
-  const term = GRADE_WEIGHTS[activeTerm] ? activeTerm : GRADED_TERMS[GRADED_TERMS.length - 1]
+  const defaultTerm = GRADE_WEIGHTS[activeTerm] ? activeTerm : GRADED_TERMS[GRADED_TERMS.length - 1]
+  const [term, setTerm] = useState<string>(defaultTerm)   // term shown in the cards (click a term card to switch)
   const [allScores, setAllScores] = useState<Record<string, Scores>>(
     Object.fromEntries(GRADED_TERMS.map(t => [t, emptyScores(t)]))
   )
   const [loaded, setLoaded] = useState(false)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [target, setTarget] = useState(90)
-  const [bonusAttendance, setBonusAttendance] = useState(false)
-  const [bonusPractice, setBonusPractice] = useState(false)
+  const [attendance, setAttendance] = useState<Record<string, number>>({})        // courseCode -> live sessions attended
+  const [practicesDone, setPracticesDone] = useState<Set<string>>(new Set())      // completed practice ids
+  const [official, setOfficial] = useState<Record<string, Record<string, Bonus>>>({}) // Canvas bonuses: term -> code
+  const [conflicts, setConflicts] = useState<Conflict[]>([])
+  const [accepted, setAccepted] = useState<Set<string>>(new Set())
+  const [applying, setApplying] = useState(false)
   const [canvas, setCanvas] = useState<Record<string, number | null>>({})
   const [sync, setSync] = useState<{ state: "idle" | "syncing" | "ok" | "error"; msg?: string }>({ state: "idle" })
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -67,28 +74,46 @@ export function GradeCenter({ activeTerm, onClose }: Props) {
   const tokenLabel = !token ? "Canvas token" : token.source === "none" ? "No Canvas token"
     : token.daysLeft !== null ? (token.daysLeft <= 0 ? "Token expired" : `Token · ${token.daysLeft}d`) : "Token · not managed"
 
-  // ── Load saved scores for every term (read-only) ───────────────────────
-  useEffect(() => {
-    Promise.all(
-      GRADED_TERMS.map(t =>
-        fetch(`/api/user/grades?term=${encodeURIComponent(t)}`)
-          .then(r => (r.ok ? r.json() : []))
-          .then((rows: { courseCode: string; assessmentIndex: number; score: number }[]) => {
-            const s = emptyScores(t)
-            if (Array.isArray(rows)) {
-              rows.forEach(r => {
-                if (s[r.courseCode] && r.assessmentIndex < s[r.courseCode].length) {
-                  s[r.courseCode][r.assessmentIndex] = Number(r.score)
-                }
-              })
-            }
-            return [t, s] as const
+  // ── Load saved data (read-only) ───────────────────────────────────────
+  const loadScores = (t: string) =>
+    fetch(`/api/user/grades?term=${encodeURIComponent(t)}`)
+      .then(r => (r.ok ? r.json() : []))
+      .then((rows: { courseCode: string; assessmentIndex: number; score: number }[]) => {
+        const sc = emptyScores(t)
+        if (Array.isArray(rows)) {
+          rows.forEach(r => {
+            if (sc[r.courseCode] && r.assessmentIndex < sc[r.courseCode].length) sc[r.courseCode][r.assessmentIndex] = Number(r.score)
           })
-      )
-    )
+        }
+        return [t, sc] as const
+      })
+
+  const loadBonuses = () =>
+    fetch("/api/user/bonus").then(r => (r.ok ? r.json() : [])).then((rows: ({ term: string; courseCode: string } & Bonus)[]) => {
+      if (!Array.isArray(rows)) return
+      const map: Record<string, Record<string, Bonus>> = {}
+      rows.forEach(r => { (map[r.term] ??= {})[r.courseCode] = { live: r.live, practices: r.practices } })
+      setOfficial(map)
+    }).catch(() => {})
+
+  useEffect(() => {
+    Promise.all(GRADED_TERMS.map(loadScores))
       .then(entries => setAllScores(Object.fromEntries(entries)))
       .catch(console.error)
       .finally(() => setLoaded(true))
+
+    fetch("/api/user/attendance").then(r => (r.ok ? r.json() : [])).then((rows: { courseCode: string; status: string }[]) => {
+      if (!Array.isArray(rows)) return
+      const count: Record<string, number> = {}
+      rows.forEach(r => { if (r.status === "present") count[r.courseCode] = (count[r.courseCode] ?? 0) + 1 })
+      setAttendance(count)
+    }).catch(() => {})
+
+    fetch("/api/user/practices").then(r => (r.ok ? r.json() : [])).then((rows: { practiceId: string; completed: boolean }[]) => {
+      if (Array.isArray(rows)) setPracticesDone(new Set(rows.filter(r => r.completed).map(r => r.practiceId)))
+    }).catch(() => {})
+
+    loadBonuses()
   }, [])
 
   // ── Canvas sync ────────────────────────────────────────────────────────
@@ -101,13 +126,43 @@ export function GradeCenter({ activeTerm, onClose }: Props) {
       if (!res.ok || !Array.isArray(data)) throw new Error(data?.error ?? `HTTP ${res.status}`)
       setCanvas(Object.fromEntries((data as CanvasInfo[]).map(c => [c.courseCode, c.gradeInfo?.currentScore ?? null])))
       const failed = (data as CanvasInfo[]).filter(c => c.error).map(c => c.courseCode)
-      setSync(failed.length
-        ? { state: "error", msg: `Synced, but failed for ${failed.join(", ")}` }
-        : { state: "ok", msg: `Synced at ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` })
+
+      // Per-assessment import: fills empty boxes + official bonuses, returns differences
+      const imp = await fetch(`/api/canvas/import?term=${encodeURIComponent(term)}`).then(r => r.json())
+      if (imp.error) throw new Error(imp.error)
+      const [, fresh] = await loadScores(term)
+      setAllScores(prev => ({ ...prev, [term]: fresh }))
+      await loadBonuses()
+      setConflicts(imp.conflicts ?? [])
+      setAccepted(new Set((imp.conflicts ?? []).map((c: Conflict) => `${c.courseCode}-${c.idx}`)))
+
+      const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      const filledTxt = imp.filled?.length ? ` · ${imp.filled.length} new grade${imp.filled.length > 1 ? "s" : ""} added` : ""
+      setSync(failed.length || imp.errors?.length
+        ? { state: "error", msg: `Synced, but failed for ${[...failed, ...(imp.errors ?? []).map((e: string) => e.split(":")[0])].join(", ")}` }
+        : { state: "ok", msg: `Synced at ${time}${filledTxt}` })
     } catch (err) {
       setSync({ state: "error", msg: `Sync failed: ${String(err).replace("Error: ", "")}` })
     }
   }
+
+  const applyConflicts = async () => {
+    setApplying(true)
+    try {
+      const accept = conflicts.filter(c => accepted.has(`${c.courseCode}-${c.idx}`)).map(c => ({ courseCode: c.courseCode, idx: c.idx, score: c.canvas }))
+      const res = await fetch("/api/canvas/import", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ term, accept }) })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const [, fresh] = await loadScores(term)
+      setAllScores(prev => ({ ...prev, [term]: fresh }))
+      setConflicts([])
+    } catch {
+      setSaveError("Couldn't apply the Canvas grades. Try again.")
+    } finally {
+      setApplying(false)
+    }
+  }
+
+  const switchTerm = (t: string) => { setTerm(t); setExpanded(null); setCanvas({}); setConflicts([]) }
 
   // ── Edit one score (saved when you leave the box or press Enter) ─────────
   const setLocal = (code: string, idx: number, value: number | null) =>
@@ -131,31 +186,47 @@ export function GradeCenter({ activeTerm, onClose }: Props) {
   }
 
   // ── Calculations ───────────────────────────────────────────────────────
-  const bonus = (bonusAttendance ? 5 : 0) + (bonusPractice ? 5 : 0)
+  // Bonus per course: +5 live (≥7 of 13 live sessions) and +5 practices (all done).
+  // Canvas's official bonus wins once it's graded; until then it's computed from your app data.
+  const bonusInfo = (t: string, code: string) => {
+    const off = official[t]?.[code]
+    const attended = attendance[code] ?? 0
+    const practices = initialPractices.filter(p => p.courseCode === code)
+    const done = practices.filter(p => practicesDone.has(p.id)).length
+    const live = off?.live ?? (attended >= 7)
+    const prac = off?.practices ?? (practices.length > 0 && done === practices.length)
+    return {
+      live, prac, attended, done, totalPractices: practices.length,
+      liveOfficial: off?.live != null, pracOfficial: off?.practices != null,
+      points: (live ? 5 : 0) + (prac ? 5 : 0),
+    }
+  }
 
   const termSummary = (t: string) => {
     const weights = GRADE_WEIGHTS[t] ?? {}
-    const stats = Object.entries(weights).map(([code, w]) => courseStats(w, allScores[t]?.[code] ?? []))
-    const avgs = stats.map(s => s.average).filter((a): a is number => a !== null)
+    const stats = Object.entries(weights).map(([code, w]) => ({ ...courseStats(w, allScores[t]?.[code] ?? []), bonus: bonusInfo(t, code).points }))
+    const totals = stats.filter(s => s.average !== null).map(s => Math.min(110, s.average! + s.bonus))
+    const raw = stats.map(s => s.average).filter((a): a is number => a !== null)
     const graded = Object.values(allScores[t] ?? {}).flat().filter(v => v !== null).length
     const total = Object.values(weights).flat().length
-    return { stats, average: avgs.length ? avgs.reduce((a, b) => a + b, 0) / avgs.length : null, graded, total }
+    const mean = (a: number[]) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null)
+    return { stats, average: mean(totals), rawAverage: mean(raw), graded, total }
   }
 
   const current = termSummary(term)
-  const termAvg = current.average !== null ? Math.min(110, current.average + bonus) : null
+  const termAvg = current.average
 
   // Average needed on all remaining work to finish the term at `target`
   const needed = useMemo(() => {
     const n = current.stats.length
-    const banked = current.stats.reduce((s, c) => s + c.earned, 0)
+    const banked = current.stats.reduce((s, c) => s + c.earned + c.bonus, 0)
     const remaining = current.stats.reduce((s, c) => s + c.remainingWeight, 0)
     if (n === 0 || remaining === 0) return null
-    return ((((target - bonus) * n) - banked) / remaining) * 100
-  }, [current.stats, target, bonus])
+    return (((target * n) - banked) / remaining) * 100
+  }, [current.stats, target])
 
   const courses = TERM_COURSES[term as Term] ?? []
-  const ringPct = termAvg !== null ? Math.min(100, termAvg) : 0
+  const ringPct = termAvg !== null ? Math.min(100, (termAvg / 110) * 100) : 0
   const R = 44, C = 2 * Math.PI * R
 
   return (
@@ -197,7 +268,7 @@ export function GradeCenter({ activeTerm, onClose }: Props) {
           <div className="rounded-2xl bg-card border border-border p-4 flex flex-col gap-3">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <p className={`text-sm font-medium ${fg}`}>Canvas access token</p>
+                <p className={`text-sm font-medium ${fg}`}>Canvas connection and alerts</p>
                 <p className={`text-[11px] ${muted}`}>
                   {!token ? "Checking…"
                     : token.source === "database"
@@ -208,10 +279,16 @@ export function GradeCenter({ activeTerm, onClose }: Props) {
                 </p>
                 {token?.lastError && <p className="text-[11px] mt-1 text-[hsl(var(--destructive))]">{token.lastError}</p>}
               </div>
+              <div className="flex gap-2">
+              <button onClick={() => tokenAction({ action: "test-alert" }, "Test alert sent. Check your email and phone.")} disabled={tokenBusy}
+                className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))] disabled:opacity-50">
+                Send test alert
+              </button>
               <button onClick={() => tokenAction({ action: "renew" }, "Renewed. Automatic renewal is on.")} disabled={tokenBusy || token?.source === "none"}
                 className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))] disabled:opacity-50">
                 <RefreshCw className={`h-3.5 w-3.5 ${tokenBusy ? "animate-spin" : ""}`} /> Renew now
               </button>
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <input type="password" value={tokenInput} onChange={e => setTokenInput(e.target.value)} placeholder="Paste a new Canvas token" autoComplete="off"
@@ -251,13 +328,15 @@ export function GradeCenter({ activeTerm, onClose }: Props) {
               const isCurrent = t === term
               const complete = s.total > 0 && s.graded === s.total
               return (
-                <div key={t} className={`rounded-xl bg-card p-3 border ${isCurrent ? "border-[hsl(var(--primary)/0.6)]" : "border-border"}`}>
+                <button key={t} onClick={() => switchTerm(t)} title={`Show ${t}`}
+                  className={`text-left rounded-xl bg-card p-3 border transition-colors hover:border-[hsl(var(--primary)/0.4)] ${isCurrent ? "border-[hsl(var(--primary)/0.6)]" : "border-border"}`}>
                   <p className={`text-[11px] ${muted}`}>{t}</p>
                   <p className={`text-2xl font-semibold ${fg}`}>{s.average !== null ? s.average.toFixed(1) : "—"}</p>
                   <p className={`text-[11px] ${complete ? "text-emerald-400" : isCurrent ? "text-[hsl(var(--primary))]" : muted}`}>
-                    {complete ? "Completed" : isCurrent ? "In progress" : `${s.graded}/${s.total} grades`}
+                    {complete ? "Completed" : t === defaultTerm ? "In progress" : `${s.graded}/${s.total} grades`}
+                    {s.rawAverage !== null && s.average !== null && s.average - s.rawAverage > 0.05 && <span className={muted}> · {s.rawAverage.toFixed(1)} without bonus</span>}
                   </p>
-                </div>
+                </button>
               )
             })}
 
@@ -275,17 +354,44 @@ export function GradeCenter({ activeTerm, onClose }: Props) {
                     : <>— you need an average of <b className={fg}>{Math.ceil(needed)}</b> on remaining work</>}
                 </span>
               </div>
-              <div className="flex items-center gap-2 ml-auto">
-                {[["+5 Attendance", bonusAttendance, setBonusAttendance], ["+5 Practices", bonusPractice, setBonusPractice]].map(([label, on, set]) => (
-                  <button key={label as string} onClick={() => (set as (f: (p: boolean) => boolean) => void)(p => !p)}
-                    className={`flex items-center gap-1 text-[10px] font-medium px-2 py-1 rounded-md border transition-colors ${on ? "border-[hsl(var(--primary)/0.6)] text-[hsl(var(--primary))] bg-[hsl(var(--primary)/0.1)]" : `border-border ${muted}`}`}>
-                    <Award className="h-3 w-3" /> {label as string}
-                  </button>
-                ))}
-              </div>
+              <span className={`flex items-center gap-1.5 text-[10px] ml-auto ${muted}`}>
+                <Award className="h-3 w-3" /> Bonus automatic: +5 live (7/13) · +5 all practices · max 110
+              </span>
             </div>
           </div>
         </div>
+
+        {/* Review: Canvas differs from what you entered */}
+        {conflicts.length > 0 && (
+          <div className="rounded-2xl bg-card border border-amber-400/40 p-4 flex flex-col gap-3">
+            <div>
+              <p className={`text-sm font-medium ${fg}`}>Canvas has different grades for {conflicts.length} assessment{conflicts.length > 1 ? "s" : ""}</p>
+              <p className={`text-[11px] ${muted}`}>Nothing has been changed. Tick the ones to replace with the Canvas value.</p>
+            </div>
+            <div className="flex flex-col divide-y divide-border">
+              {conflicts.map(c => {
+                const k = `${c.courseCode}-${c.idx}`
+                return (
+                  <label key={k} className="flex items-center gap-3 py-1.5 text-xs cursor-pointer">
+                    <input type="checkbox" checked={accepted.has(k)}
+                      onChange={() => setAccepted(prev => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n })} />
+                    <span className={`font-mono text-[10px] ${muted}`}>{c.courseCode}</span>
+                    <span className={`flex-1 truncate ${fg}`}>A{c.idx + 1} · {c.name.replace(/^[^A-Za-z]+/, "")}</span>
+                    <span className={muted}>yours <b className={fg}>{c.app}</b></span>
+                    <span className={muted}>→ Canvas <b className="text-emerald-400">{c.canvas}</b></span>
+                  </label>
+                )
+              })}
+            </div>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setConflicts([])} className={`text-[11px] px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))] ${muted}`}>Keep mine</button>
+              <button onClick={applyConflicts} disabled={applying || accepted.size === 0}
+                className="text-[11px] font-medium px-3 py-1.5 rounded-lg bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] disabled:opacity-50">
+                {applying ? "Applying…" : `Use Canvas for ${accepted.size}`}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Course cards */}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -294,7 +400,8 @@ export function GradeCenter({ activeTerm, onClose }: Props) {
             if (!weights) return null
             const scores = allScores[term]?.[course.code] ?? []
             const st = courseStats(weights, scores)
-            const avg = st.average !== null ? Math.min(110, st.average + bonus) : null
+            const b = bonusInfo(term, course.code)
+            const avg = st.average !== null ? Math.min(110, st.average + b.points) : null
             const isOpen = expanded === course.code
             const canvasScore = canvas[course.code]
             return (
@@ -327,6 +434,18 @@ export function GradeCenter({ activeTerm, onClose }: Props) {
                         A{i + 1} {scores[i] !== null ? scores[i] : "·"}
                       </span>
                     ))}
+                    {(b.attended > 0 || b.liveOfficial) && (
+                      <span title={b.liveOfficial ? "Live-session bonus (official, from Canvas)" : `${b.attended} of 13 live sessions attended — 7 needed`}
+                        className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md ${b.live ? "bg-emerald-400/15 text-emerald-400" : `bg-[hsl(var(--muted))] ${muted}`}`}>
+                        <Radio className="h-3 w-3" />{b.liveOfficial ? (b.live ? "+5" : "0") : b.live ? "+5" : `${b.attended}/7`}
+                      </span>
+                    )}
+                    {(b.totalPractices > 0 || b.pracOfficial) && (
+                      <span title={b.pracOfficial ? "Practices bonus (official, from Canvas)" : `${b.done} of ${b.totalPractices} practices done`}
+                        className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md ${b.prac ? "bg-emerald-400/15 text-emerald-400" : `bg-[hsl(var(--muted))] ${muted}`}`}>
+                        <CheckSquare className="h-3 w-3" />{b.pracOfficial ? (b.prac ? "+5" : "0") : b.prac ? "+5" : `${b.done}/${b.totalPractices}`}
+                      </span>
+                    )}
                     {canvasScore != null && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]">Canvas {canvasScore}%</span>
                     )}
