@@ -9,86 +9,94 @@
 }
 
 @layer base {
-  /* ── DARK MODE (default) ─────────────────────────────── */
+  /* ── Bento design tokens ───────────────────────────────────────────
+     Light (default): soft grey ground, white tiles, ink text, lime brand.
+     Dark: the same structure in deep ink tones, lime as the primary.   */
   :root,
-  .dark {
-    --background: 240 20% 4%;
-    --foreground: 220 10% 93%;
-    --card: 240 15% 8%;
-    --card-foreground: 220 10% 93%;
-    --popover: 240 15% 10%;
-    --popover-foreground: 220 10% 93%;
-    --primary: 187 100% 50%;
-    --primary-foreground: 240 20% 4%;
-    --secondary: 310 100% 64%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 240 10% 14%;
-    --muted-foreground: 240 5% 50%;
-    --accent: 187 80% 42%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 10% 16%;
-    --input: 240 10% 16%;
-    --ring: 187 100% 50%;
-    --chart-1: 187 100% 50%;
-    --chart-2: 310 100% 64%;
-    --chart-3: 160 60% 45%;
-    --chart-4: 45 90% 60%;
-    --chart-5: 270 70% 60%;
-    --radius: 0.625rem;
-    --sidebar-background: 240 18% 6%;
-    --sidebar-foreground: 220 10% 80%;
-    --sidebar-primary: 187 100% 50%;
-    --sidebar-primary-foreground: 240 20% 4%;
-    --sidebar-accent: 240 12% 12%;
-    --sidebar-accent-foreground: 220 10% 93%;
-    --sidebar-border: 240 10% 14%;
-    --sidebar-ring: 187 100% 50%;
-    --neon-cyan: 187 100% 50%;
-    --neon-pink: 310 100% 64%;
-    --neon-green: 160 100% 50%;
-    --neon-yellow: 45 100% 60%;
+  .light {
+    --background: 225 17% 93%;        /* #E9EBF0 */
+    --foreground: 233 18% 9%;         /* #12131A ink */
+    --card: 0 0% 100%;
+    --card-foreground: 233 18% 9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 233 18% 9%;
+    --primary: 233 18% 9%;            /* ink buttons / active pills */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 225 20% 96%;
+    --secondary-foreground: 233 18% 9%;
+    --muted: 225 20% 95%;             /* #EEF0F4 */
+    --muted-foreground: 232 11% 33%;  /* #4A4D5C — 8:1 on white */
+    --accent: 77 85% 65%;
+    --accent-foreground: 233 18% 9%;
+    --destructive: 358 72% 48%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 225 15% 88%;
+    --input: 225 15% 86%;
+    --ring: 233 18% 9%;
+    --lime: 77 85% 65%;               /* #C7F25B brand accent */
+    --lime-foreground: 233 18% 9%;
+    --ink-tile: 233 18% 9%;           /* the dark hero tile */
+    --chart-1: 77 70% 45%;
+    --chart-2: 228 70% 55%;
+    --chart-3: 152 55% 40%;
+    --chart-4: 30 90% 55%;
+    --chart-5: 270 55% 55%;
+    --radius: 0.875rem;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 233 18% 9%;
+    --sidebar-primary: 233 18% 9%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 225 20% 95%;
+    --sidebar-accent-foreground: 233 18% 9%;
+    --sidebar-border: 225 15% 88%;
+    --sidebar-ring: 233 18% 9%;
+    --neon-cyan: 228 70% 50%;
+    --neon-pink: 330 70% 50%;
+    --neon-green: 152 55% 36%;
+    --neon-yellow: 40 90% 45%;
   }
 
-  /* ── LIGHT MODE ──────────────────────────────────────── */
-  .light {
-    --background: 210 20% 97%;
-    --foreground: 240 15% 12%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 15% 12%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 15% 12%;
-    --primary: 187 70% 38%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 310 60% 50%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 210 15% 92%;
-    --muted-foreground: 240 8% 42%;
-    --accent: 187 50% 90%;
-    --accent-foreground: 187 70% 25%;
-    --destructive: 0 75% 50%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 220 13% 86%;
-    --input: 220 13% 86%;
-    --ring: 187 70% 38%;
-    --chart-1: 187 70% 38%;
-    --chart-2: 310 60% 50%;
-    --chart-3: 160 50% 38%;
-    --chart-4: 45 80% 48%;
-    --chart-5: 270 55% 52%;
-    --sidebar-background: 210 18% 94%;
-    --sidebar-foreground: 240 12% 20%;
-    --sidebar-primary: 187 70% 38%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 15% 88%;
-    --sidebar-accent-foreground: 240 15% 12%;
-    --sidebar-border: 220 13% 84%;
-    --sidebar-ring: 187 70% 38%;
-    --neon-cyan: 187 70% 38%;
-    --neon-pink: 310 60% 50%;
-    --neon-green: 160 60% 35%;
-    --neon-yellow: 45 80% 42%;
+  .dark {
+    --background: 232 18% 7%;         /* #0E0F14 */
+    --foreground: 230 20% 96%;
+    --card: 232 14% 11%;              /* #17181F */
+    --card-foreground: 230 20% 96%;
+    --popover: 232 14% 12%;
+    --popover-foreground: 230 20% 96%;
+    --primary: 77 85% 65%;            /* lime buttons in dark */
+    --primary-foreground: 233 18% 9%;
+    --secondary: 232 12% 16%;
+    --secondary-foreground: 230 20% 96%;
+    --muted: 232 12% 15%;
+    --muted-foreground: 230 9% 67%;   /* #A2A5B4 */
+    --accent: 77 85% 65%;
+    --accent-foreground: 233 18% 9%;
+    --destructive: 358 75% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 232 12% 18%;
+    --input: 232 12% 20%;
+    --ring: 77 85% 65%;
+    --lime: 77 85% 65%;
+    --lime-foreground: 233 18% 9%;
+    --ink-tile: 232 16% 14%;
+    --chart-1: 77 85% 65%;
+    --chart-2: 228 80% 70%;
+    --chart-3: 152 55% 55%;
+    --chart-4: 30 90% 62%;
+    --chart-5: 270 70% 72%;
+    --radius: 0.875rem;
+    --sidebar-background: 232 16% 9%;
+    --sidebar-foreground: 230 15% 85%;
+    --sidebar-primary: 77 85% 65%;
+    --sidebar-primary-foreground: 233 18% 9%;
+    --sidebar-accent: 232 12% 15%;
+    --sidebar-accent-foreground: 230 20% 96%;
+    --sidebar-border: 232 12% 16%;
+    --sidebar-ring: 77 85% 65%;
+    --neon-cyan: 190 90% 60%;
+    --neon-pink: 330 85% 70%;
+    --neon-green: 152 60% 55%;
+    --neon-yellow: 45 95% 62%;
   }
 }
 
@@ -103,15 +111,15 @@
 
 /* Custom scrollbar — dark */
 .dark ::-webkit-scrollbar { width: 6px; height: 6px; }
-.dark ::-webkit-scrollbar-track { background: hsl(240 15% 8%); }
-.dark ::-webkit-scrollbar-thumb { background: hsl(240 10% 20%); border-radius: 3px; }
-.dark ::-webkit-scrollbar-thumb:hover { background: hsl(187 100% 50% / 0.4); }
+.dark ::-webkit-scrollbar-track { background: hsl(232 18% 7%); }
+.dark ::-webkit-scrollbar-thumb { background: hsl(232 12% 22%); border-radius: 3px; }
+.dark ::-webkit-scrollbar-thumb:hover { background: hsl(77 85% 65% / 0.5); }
 
 /* Custom scrollbar — light */
 .light ::-webkit-scrollbar { width: 6px; height: 6px; }
-.light ::-webkit-scrollbar-track { background: hsl(210 15% 92%); }
-.light ::-webkit-scrollbar-thumb { background: hsl(220 13% 75%); border-radius: 3px; }
-.light ::-webkit-scrollbar-thumb:hover { background: hsl(187 70% 38% / 0.5); }
+.light ::-webkit-scrollbar-track { background: hsl(225 17% 93%); }
+.light ::-webkit-scrollbar-thumb { background: hsl(225 10% 75%); border-radius: 3px; }
+.light ::-webkit-scrollbar-thumb:hover { background: hsl(233 18% 9% / 0.5); }
 
 /* Neon glow utilities — dark */
 .dark .neon-glow-cyan {
@@ -128,3 +136,6 @@
 .light .neon-glow-pink { box-shadow: 0 0 0 1px hsl(310 60% 50% / 0.3); }
 .light .neon-text-cyan { text-shadow: none; }
 .light .neon-text-pink { text-shadow: none; }
+/* Bento: display font helper + tabular numbers for grades and countdowns */
+.font-display { font-family: "Space Grotesk", Inter, system-ui, sans-serif; letter-spacing: -0.02em; }
+.tabular { font-variant-numeric: tabular-nums; }

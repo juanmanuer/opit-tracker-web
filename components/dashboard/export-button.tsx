@@ -281,7 +281,7 @@ export function ExportButton({ activeTerm }: Props) {
     <button
       onClick={handleExport}
       disabled={loading}
-      className="flex h-8 w-8 items-center justify-center rounded-lg text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] transition-colors disabled:opacity-50"
+      className="flex h-10 w-10 items-center justify-center rounded-2xl bg-card text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors disabled:opacity-50"
       aria-label="Export to PDF"
       title="Export term report to PDF"
     >

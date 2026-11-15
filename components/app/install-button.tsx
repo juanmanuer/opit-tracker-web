@@ -20,8 +20,8 @@ export function InstallButton({ compact = false }: { compact?: boolean }) {
   return (
     <button onClick={async () => { prompt.prompt(); await prompt.userChoice; setPrompt(null) }} title="Install OPIT Tracker as an app"
       className={compact
-        ? "h-9 w-9 rounded-xl flex items-center justify-center bg-[hsl(var(--primary)/0.12)] text-[hsl(var(--primary))]"
-        : "flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-[hsl(var(--primary)/0.12)] text-[hsl(var(--primary))]"}>
+        ? "h-10 w-10 rounded-2xl flex items-center justify-center bg-[hsl(var(--lime))] text-[hsl(var(--lime-foreground))] shrink-0"
+        : "flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl bg-[hsl(var(--lime))] text-[hsl(var(--lime-foreground))]"}>
       <Download className="h-4 w-4" />{!compact && " Install app"}
     </button>
   )

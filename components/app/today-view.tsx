@@ -1,22 +1,27 @@
 "use client"
 
+// Today — Bento layout: one glance at what matters now.
 import { useEffect, useState } from "react"
-import { Video, Check, Radio, CheckSquare, ExternalLink, CalendarClock } from "lucide-react"
+import { useSession } from "next-auth/react"
+import { Video, Check, Radio, CheckSquare, ExternalLink, CalendarClock, ArrowRight } from "lucide-react"
 import { QUICK_LINKS } from "@/lib/store"
 import { getActiveCatalog } from "@/lib/catalog"
 import { getGrade } from "@/lib/grades"
 import {
   coursesOf, assessmentsOf, practicesOf, parseDeadline, daysUntil, nextSessions, parseLiveSession,
-  formatCountdown, zoomUrl, termResult, bonusInfo, termWeek, professorOf, TERM_WEEKS, LIVE_NEEDED,
+  formatCountdown, zoomUrl, termResult, bonusInfo, courseResult, termWeek, professorOf, TERM_WEEKS, LIVE_NEEDED,
 } from "@/lib/academic"
 import type { Academic } from "@/hooks/use-academic"
 
 const muted = "text-[hsl(var(--muted-foreground))]"
-const fg = "text-[hsl(var(--foreground))]"
-const card = "rounded-2xl bg-card border border-border"
+const tile = "rounded-3xl bg-card p-5 sm:p-6"
+// Course colour softened into a tile background that works in light and dark mode
+export const tint = (hex: string, pct = 20) => `color-mix(in srgb, ${hex} ${pct}%, hsl(var(--card)))`
 
 export function TodayView({ term, academic, onOpenCourse }: { term: string; academic: Academic; onOpenCourse: (code: string) => void }) {
   const { state, togglePractice } = academic
+  const { data: session } = useSession()
+  const first = session?.user?.name?.split(" ")[0] ?? ""
   const [now, setNow] = useState(() => new Date())
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 30_000); return () => clearInterval(t) }, [])
 
@@ -27,160 +32,220 @@ export function TodayView({ term, academic, onOpenCourse }: { term: string; acad
   const tr = termResult(state, term)
   const week = termWeek(term, now)
 
-  const sessions = isCurrent ? nextSessions(term, now, 1) : []
-  const next = sessions[0]
+  const next = isCurrent ? nextSessions(term, now, 1)[0] : undefined
   const nextBonus = next ? bonusInfo(state, term, next.professor.courseCode) : null
 
-  // Deadlines: next 14 days (plus anything overdue that isn't done)
+  // Deadlines: next 14 days, plus anything overdue that isn't done
   const deadlines = courses.flatMap(c => assessmentsOf(c.code).map((a, idx) => {
-    const date = parseDeadline(a.deadline, term)
+    const date = a.dueAt ? new Date(a.dueAt) : parseDeadline(a.deadline, term)
     const graded = state.scores[term]?.[c.code]?.[idx] != null
     const status = state.assessmentStatus[a.id] ?? a.status
     return { a, c, date, days: date ? daysUntil(date, now) : null, done: graded || status === "done" }
   }))
     .filter(d => d.days !== null && !d.done && d.days <= 14 && d.days >= -14)
     .sort((x, y) => x.days! - y.days!)
+  const soonest = deadlines.find(d => d.days! >= 0)
 
-  // Next 7 days, starting today
+  const bonuses = courses.map(c => ({ c, b: bonusInfo(state, term, c.code) }))
+  const secured = bonuses.reduce((n, { b }) => n + (b.live ? 1 : 0) + (b.prac ? 1 : 0), 0)
+  const bonusPoints = secured * 5
+
   const weekDays = Array.from({ length: 7 }, (_, i) => new Date(now.getFullYear(), now.getMonth(), now.getDate() + i))
   const slots = isCurrent ? courses.map(c => ({ code: c.code, slot: parseLiveSession(professorOf(term, c.code)?.liveSessions ?? "") })) : []
 
-  // One pending practice per course (round-robin), up to 4
   const queues = courses.map(c => practicesOf(c.code).filter(p => !state.practicesDone.has(p.id)))
-  const pendingPractices = queues.flatMap((q, i) => q.slice(0, 1)).concat(queues.flatMap(q => q.slice(1, 2))).slice(0, 4)
+  const pendingPractices = queues.flatMap(q => q.slice(0, 1)).concat(queues.flatMap(q => q.slice(1, 2))).slice(0, 4)
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h1 className={`text-xl font-semibold ${fg}`}>{greeting(now)}, Juanma</h1>
-          <p className={`text-xs ${muted}`}>
-            {now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })} · {term}
-            {isCurrent && week && <> · week {week} of {TERM_WEEKS}</>}
-          </p>
-        </div>
-      </div>
+    <div className="flex flex-col gap-3.5">
+      <div className="grid gap-3.5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
 
-      {/* Row 1: next session · average · bonus */}
-      <div className="grid gap-3 grid-cols-[minmax(0,1fr)] md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)]">
+        {/* Welcome — dark tile with brand and signature */}
+        <section aria-label="Welcome" className="sm:col-span-2 rounded-3xl bg-[hsl(var(--ink-tile))] text-white p-6 sm:p-7 flex flex-col justify-between gap-6 min-h-[220px]">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="h-9 w-9 rounded-xl bg-[hsl(var(--lime))] text-[hsl(var(--lime-foreground))] flex items-center justify-center font-display font-bold text-sm">OT</span>
+              <span className="font-display font-bold">OPIT Tracker</span>
+            </div>
+            <span className="font-display text-xs text-white/70">by Juan M. Aguilar</span>
+          </div>
+          <div>
+            <p className="font-display text-[13px] text-white/70 uppercase tracking-wide">
+              {now.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}
+              {isCurrent && week ? ` · week ${week} / ${TERM_WEEKS}` : ` · ${term}`}
+            </p>
+            <h1 className="font-display text-[34px] sm:text-[40px] leading-[1.05] font-semibold mt-1.5">
+              {greeting(now)}{first ? `, ${first}` : ""}.
+              <span className="block text-white/60 text-[22px] sm:text-[26px] mt-1">
+                {!isCurrent ? `${term} is complete.`
+                  : soonest ? soonest.days === 0 ? `${short(soonest.c.name)} is due today.` : `${soonest.days} day${soonest.days === 1 ? "" : "s"} to ${short(soonest.c.name)}.`
+                  : "Nothing due in the next two weeks."}
+              </span>
+            </h1>
+          </div>
+          {isCurrent && week && (
+            <div aria-hidden="true" className="flex gap-1">
+              {Array.from({ length: TERM_WEEKS }, (_, i) => (
+                <span key={i} className={`flex-1 h-1.5 rounded-full ${i < week - 1 ? "bg-[hsl(var(--lime))]" : i === week - 1 ? "bg-white" : "bg-white/15"}`} />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Term average — the lime tile */}
+        <section aria-label="Term average" className="rounded-3xl bg-[hsl(var(--lime))] text-[hsl(var(--lime-foreground))] p-6 flex flex-col justify-between min-h-[220px]">
+          <span className="font-display text-[13px] font-semibold">{term} average</span>
+          <div>
+            <div className="font-display font-bold tabular leading-[0.9] text-[76px] tracking-[-0.05em]">
+              {tr.average !== null ? <>{tr.average.toFixed(1).split(".")[0]}<span className="text-[40px]">.{tr.average.toFixed(1).split(".")[1]}</span></> : "—"}
+            </div>
+            <p className="text-[13px] mt-2 font-medium">
+              {tr.average !== null ? `${getGrade(tr.average).letter} · ` : ""}{tr.graded} of {tr.total} graded
+              {tr.rawAverage !== null && tr.average !== null && tr.average - tr.rawAverage > 0.05 && ` · ${tr.rawAverage.toFixed(1)} without bonus`}
+            </p>
+          </div>
+        </section>
+
+        {/* Bonuses secured */}
+        <section aria-label="Bonuses" className={`${tile} flex flex-col justify-between gap-4 min-h-[220px]`}>
+          <div className="flex items-center justify-between">
+            <span className="font-display text-[13px] font-semibold">Bonuses</span>
+            <span className={`text-[11px] px-2 py-0.5 rounded-full bg-[hsl(var(--muted))] ${muted}`}>+{bonusPoints} pts</span>
+          </div>
+          <div className="font-display font-bold tabular leading-[0.9] text-[56px] tracking-[-0.04em]">
+            {secured}<span className={`text-[22px] tracking-normal ${muted}`}> / {courses.length * 2}</span>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            {bonuses.map(({ c, b }) => (
+              <button key={c.code} onClick={() => onOpenCourse(c.code)} className="flex items-center gap-2 text-[11px] text-left" title={`${c.name}: live ${b.live ? "secured" : `${b.attended}/${LIVE_NEEDED}`}, practices ${b.prac ? "secured" : `${b.done}/${b.totalPractices}`}`}>
+                <span className="font-display font-semibold w-10 tabular" style={{ color: c.color }}>{c.code.split("-").pop()}</span>
+                <span className={`flex-1 h-2 rounded-full ${b.live ? "bg-[hsl(var(--foreground))]" : "bg-[hsl(var(--muted))]"}`} />
+                <span className={`flex-1 h-2 rounded-full ${b.prac ? "bg-[hsl(var(--foreground))]" : "bg-[hsl(var(--muted))]"}`} />
+              </button>
+            ))}
+            <div className={`flex gap-2 text-[10px] ${muted} pl-12`}><span className="flex-1">live</span><span className="flex-1">practices</span></div>
+          </div>
+        </section>
+
+        {/* Next live session */}
         {next ? (
-          <div className={`${card} p-4 flex flex-col justify-between`} style={{ borderLeft: `3px solid ${color(next.professor.courseCode)}` }}>
-            <div>
-              <p className={`text-[11px] ${muted}`}>{next.live ? "Live now" : "Next live session"}</p>
-              <p className={`text-base font-semibold ${fg}`}>{next.professor.courseName}</p>
-              <p className={`text-xs ${muted}`}>
-                {next.start.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" })} · {fmt(next.start)}–{fmt(next.end)} · {next.professor.name}
+          <section aria-label="Next live session" className="sm:col-span-2 rounded-3xl p-6 flex flex-wrap items-center gap-5" style={{ background: tint(color(next.professor.courseCode), 22) }}>
+            <div className="flex-1 basis-64 min-w-0">
+              <span className="font-display text-xs font-semibold tracking-wider uppercase">{next.live ? "Live now" : "Next live"} · {next.professor.courseCode}</span>
+              <h2 className="font-display text-[26px] leading-tight font-semibold mt-1.5">{next.professor.courseName}</h2>
+              <p className="text-sm mt-1.5 opacity-80">
+                {next.start.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })} · {fmt(next.start)}–{fmt(next.end)}
+                {nextBonus && (nextBonus.live ? " · live bonus secured" : nextBonus.attended === LIVE_NEEDED - 1 ? ` · ${nextBonus.attended}/${LIVE_NEEDED} — this one locks the +5` : ` · attendance ${nextBonus.attended}/${LIVE_NEEDED}`)}
               </p>
             </div>
-            <div className="flex items-end justify-between mt-3 gap-3">
-              <div>
-                <p className={`text-2xl font-semibold ${fg}`}>{formatCountdown(next.start, now)}</p>
-                {nextBonus && (
-                  <p className={`text-[11px] ${nextBonus.live ? "text-emerald-400" : nextBonus.attended === LIVE_NEEDED - 1 ? "text-amber-400" : muted}`}>
-                    {nextBonus.live ? "Live bonus +5 secured" : nextBonus.attended === LIVE_NEEDED - 1 ? `Attendance ${nextBonus.attended}/7 · this one gets you +5` : `Attendance ${nextBonus.attended}/7`}
-                  </p>
-                )}
-              </div>
-              {next.professor.meetingId && (
+            <div className="flex flex-col items-end gap-2.5">
+              <span className="font-display font-bold tabular text-[34px] tracking-[-0.03em]">{formatCountdown(next.start, now)}</span>
+              {next.professor.meetingId ? (
                 <a href={zoomUrl(next.professor.meetingId)} target="_blank" rel="noreferrer"
-                  className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:opacity-90">
-                  <Video className="h-3.5 w-3.5" /> Join Zoom
+                  className="inline-flex items-center gap-2 h-11 px-5 rounded-2xl bg-[hsl(var(--foreground))] text-[hsl(var(--background))] font-display font-semibold text-sm hover:opacity-90">
+                  <Video className="h-4 w-4" /> Join Zoom
                 </a>
+              ) : (
+                <button onClick={() => onOpenCourse(next.professor.courseCode)} className="inline-flex items-center gap-2 h-11 px-5 rounded-2xl bg-[hsl(var(--foreground))] text-[hsl(var(--background))] font-display font-semibold text-sm">
+                  Course <ArrowRight className="h-4 w-4" />
+                </button>
               )}
             </div>
-          </div>
+          </section>
         ) : (
-          <div className={`${card} p-4 flex items-center gap-3`}>
+          <section aria-label="Live sessions" className={`sm:col-span-2 ${tile} flex items-center gap-3`}>
             <CalendarClock className={`h-5 w-5 ${muted}`} />
             <p className={`text-sm ${muted}`}>{isCurrent ? "No live sessions in the next two weeks." : `${term} is finished. Switch to ${currentTerm} for upcoming sessions.`}</p>
-          </div>
+          </section>
         )}
 
-        <div className="rounded-2xl bg-[hsl(var(--muted)/0.5)] p-4 flex flex-col items-center justify-center">
-          <Ring value={tr.average} />
-          <p className={`text-[11px] mt-1 text-center ${muted}`}>
-            {term} average{tr.rawAverage !== null && tr.average !== null && tr.average - tr.rawAverage > 0.05 && <> · {tr.rawAverage.toFixed(1)} without bonus</>}
-          </p>
-        </div>
+        {/* Due soon */}
+        <section aria-label="Due soon" className={`sm:col-span-2 ${tile} flex flex-col gap-3`}>
+          <h3 className="font-display font-semibold">Due soon</h3>
+          {deadlines.length === 0 ? (
+            <p className={`text-sm ${muted}`}>Nothing due in the next two weeks.</p>
+          ) : deadlines.slice(0, 4).map(d => (
+            <button key={d.a.id} onClick={() => onOpenCourse(d.c.code)} className="flex items-center gap-3.5 text-left">
+              <span className={`h-12 w-12 rounded-2xl flex items-baseline justify-center pt-2.5 font-display font-bold text-xl tabular shrink-0 ${d.days! < 0 ? "bg-[hsl(var(--destructive))] text-white" : ""}`}
+                style={d.days! < 0 ? undefined : { background: tint(d.c.color, 28) }}>
+                {d.days === 0 ? "!" : Math.abs(d.days!)}<span className="text-[10px] font-medium">{d.days === 0 ? "" : "d"}</span>
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="block text-sm font-semibold truncate">{short(d.c.name)} · {d.a.title}</span>
+                <span className={`block text-xs ${d.days! < 0 ? "text-[hsl(var(--destructive))] font-medium" : muted}`}>{d.c.code} · {d.days! < 0 ? `${-d.days!} day${d.days === -1 ? "" : "s"} late — mark it submitted if it's done` : d.date!.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}</span>
+              </span>
+              <span className="font-display font-semibold text-sm tabular">{d.a.weight}</span>
+            </button>
+          ))}
+        </section>
+      </div>
 
-        <div className="rounded-2xl bg-[hsl(var(--muted)/0.5)] p-4">
-          <p className={`text-[11px] mb-2 ${muted}`}>Bonus</p>
-          <div className="flex flex-col gap-1.5">
-            {courses.map(c => {
-              const b = bonusInfo(state, term, c.code)
+      {/* Course tiles */}
+      <section aria-label="Courses" className="grid gap-3.5 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+        {courses.map(c => {
+          const r = courseResult(state, term, c.code)
+          const b = r.bonus
+          return (
+            <button key={c.code} onClick={() => onOpenCourse(c.code)}
+              className="rounded-3xl p-4 sm:p-5 min-h-[160px] flex flex-col justify-between gap-3 text-left transition-transform hover:-translate-y-0.5"
+              style={{ background: tint(c.color, 22) }}>
+              <span className="flex items-start justify-between gap-2">
+                <span className="font-display text-xs font-semibold">{c.code}</span>
+                {r.total !== null
+                  ? <span className="font-display font-bold tabular text-[28px] leading-none tracking-[-0.03em]">{r.total.toFixed(0)}</span>
+                  : <span className="font-display text-xs font-medium opacity-60">no grade yet</span>}
+              </span>
+              <span className="font-display font-semibold text-[15px] leading-tight">{c.name}</span>
+              <span className="flex flex-wrap gap-1.5">
+                <Chip ok={b.live} icon={<Radio className="h-3 w-3" />} text={b.live ? "live ✓" : `live ${b.attended}/${LIVE_NEEDED}`} />
+                {b.totalPractices > 0 && <Chip ok={b.prac} icon={<CheckSquare className="h-3 w-3" />} text={b.prac ? "practices ✓" : `${b.done}/${b.totalPractices}`} />}
+              </span>
+            </button>
+          )
+        })}
+      </section>
+
+      {/* Week + practices */}
+      <div className="grid gap-3.5 grid-cols-1 lg:grid-cols-2">
+        <section aria-label="Next 7 days" className={tile}>
+          <h3 className="font-display font-semibold mb-3">Next 7 days</h3>
+          <div className="grid grid-cols-7 gap-1.5 text-center">
+            {weekDays.map(day => {
+              const isToday = day.toDateString() === now.toDateString()
+              const dots = slots.filter(s => s.slot?.weekday === day.getDay())
+              const due = deadlines.filter(d => d.date!.toDateString() === day.toDateString())
               return (
-                <button key={c.code} onClick={() => onOpenCourse(c.code)} className="flex items-center gap-1.5 text-[11px] text-left">
-                  <span className="font-mono w-9" style={{ color: c.color }}>{c.code.split("-")[1]}</span>
-                  <Pill ok={b.live} icon={<Radio className="h-3 w-3" />} text={b.live ? "+5" : `${b.attended}/7`} />
-                  <Pill ok={b.prac} icon={<CheckSquare className="h-3 w-3" />} text={b.prac ? "+5" : b.totalPractices ? `${b.done}/${b.totalPractices}` : "—"} />
-                </button>
+                <div key={day.toISOString()} className={`rounded-2xl py-2 ${isToday ? "bg-[hsl(var(--lime))] text-[hsl(var(--lime-foreground))]" : "bg-[hsl(var(--muted))]"}`}>
+                  <p className={`text-[10px] font-display uppercase ${isToday ? "font-semibold" : muted}`}>{day.toLocaleDateString("en-GB", { weekday: "short" })}</p>
+                  <p className="font-display font-semibold tabular">{day.getDate()}</p>
+                  <div className="flex justify-center gap-0.5 mt-1 min-h-[8px]">
+                    {dots.map(s => <span key={s.code} title={`${s.code} live session`} className="h-2 w-2 rounded-full" style={{ backgroundColor: color(s.code) }} />)}
+                    {due.map(d => <span key={d.a.id} title={`${d.c.code} ${d.a.title} due`} className={`h-2 w-2 rotate-45 ${isToday ? "bg-[hsl(var(--lime-foreground))]" : "bg-[hsl(var(--foreground))]"}`} />)}
+                  </div>
+                </div>
               )
             })}
           </div>
-        </div>
-      </div>
+        </section>
 
-      {/* Row 2: deadlines · week + practices */}
-      <div className="grid gap-3 grid-cols-[minmax(0,1fr)] md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-        <div className={`${card} p-4`}>
-          <p className={`text-sm font-medium mb-2 ${fg}`}>Next 14 days</p>
-          {deadlines.length === 0 ? (
-            <p className={`text-xs ${muted}`}>Nothing due in the next two weeks.</p>
-          ) : deadlines.map(d => (
-            <button key={d.a.id} onClick={() => onOpenCourse(d.c.code)} className="w-full flex items-center gap-3 py-2 border-t border-border text-left">
-              <span className="w-1 h-8 rounded-full" style={{ backgroundColor: d.c.color }} />
-              <div className="flex-1 min-w-0">
-                <p className={`text-sm truncate ${fg}`}>{d.c.name} — {d.a.title}</p>
-                <p className={`text-[11px] ${muted}`}>{d.c.code} · weight {d.a.weight} · {d.date!.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</p>
-              </div>
-              <span className={`text-base font-semibold ${d.days! < 0 ? "text-[hsl(var(--destructive))]" : d.days! <= 7 ? "text-amber-400" : fg}`}>
-                {d.days! < 0 ? `${-d.days!}d late` : d.days === 0 ? "Today" : `${d.days}d`}
-              </span>
-            </button>
-          ))}
-        </div>
-
-        <div className="flex flex-col gap-3 min-w-0">
-          <div className={`${card} p-4`}>
-            <p className={`text-sm font-medium mb-2 ${fg}`}>Next 7 days</p>
-            <div className="grid grid-cols-7 gap-1 text-center">
-              {weekDays.map(day => {
-                const isToday = day.toDateString() === now.toDateString()
-                const dots = slots.filter(s => s.slot?.weekday === day.getDay())
-                const due = deadlines.filter(d => d.date!.toDateString() === day.toDateString())
-                return (
-                  <div key={day.toISOString()} className={`rounded-lg py-1.5 ${isToday ? "bg-[hsl(var(--primary)/0.12)] ring-1 ring-[hsl(var(--primary)/0.5)]" : "bg-[hsl(var(--muted)/0.5)]"}`}>
-                    <p className={`text-[10px] ${isToday ? "text-[hsl(var(--primary))] font-semibold" : muted}`}>{day.toLocaleDateString("en-GB", { weekday: "narrow" })}</p>
-                    <p className={`text-xs ${fg}`}>{day.getDate()}</p>
-                    <div className="flex justify-center gap-0.5 mt-1 min-h-[7px]">
-                      {dots.map(s => <span key={s.code} title={`${s.code} live session`} className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color(s.code) }} />)}
-                      {due.map(d => <span key={d.a.id} title={`${d.c.code} ${d.a.title} due`} className="h-1.5 w-1.5 rotate-45 bg-[hsl(var(--destructive))]" />)}
-                    </div>
-                  </div>
-                )
-              })}
+        <section aria-label="Next practices" className={tile}>
+          <h3 className="font-display font-semibold mb-2">Next practices</h3>
+          {pendingPractices.length === 0 ? <p className={`text-sm ${muted}`}>All practices done. Bonus secured.</p> : pendingPractices.map(p => (
+            <div key={p.id} className="flex items-center justify-between gap-2 py-1.5">
+              <span className="text-sm truncate"><span className="font-display font-semibold" style={{ color: color(p.courseCode) }}>{p.courseCode.split("-").pop()}</span> <span className={muted}>·</span> {p.title}</span>
+              <button onClick={() => togglePractice(p.id)} className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-xl bg-[hsl(var(--muted))] hover:bg-[hsl(var(--lime))] hover:text-[hsl(var(--lime-foreground))] transition-colors shrink-0">
+                <Check className="h-3.5 w-3.5" /> Done
+              </button>
             </div>
-          </div>
-
-          <div className="rounded-2xl bg-[hsl(var(--muted)/0.5)] p-4">
-            <p className={`text-sm font-medium mb-2 ${fg}`}>Next practices</p>
-            {pendingPractices.length === 0 ? <p className={`text-xs ${muted}`}>All practices done. Bonus secured.</p> : pendingPractices.map(p => (
-              <div key={p.id} className="flex items-center justify-between gap-2 py-1">
-                <span className={`text-xs truncate ${muted}`}><span className="font-mono" style={{ color: color(p.courseCode) }}>{p.courseCode.split("-")[1]}</span> · {p.title}</span>
-                <button onClick={() => togglePractice(p.id)} className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border border-border hover:bg-[hsl(var(--muted))] shrink-0">
-                  <Check className="h-3 w-3" /> Done
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
+          ))}
+        </section>
       </div>
 
       {/* Quick links */}
       <div className="flex flex-wrap gap-2">
         {QUICK_LINKS.map(l => (
           <a key={l.id} href={l.url} target="_blank" rel="noreferrer" title={l.description}
-            className={`flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))] ${muted}`}>
+            className={`flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-xl bg-card hover:text-[hsl(var(--foreground))] ${muted}`}>
             {l.label} <ExternalLink className="h-3 w-3" />
           </a>
         ))}
@@ -194,10 +259,15 @@ function greeting(d: Date) {
   return h < 12 ? "Good morning" : h < 19 ? "Good afternoon" : "Good evening"
 }
 const fmt = (d: Date) => d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+// "Introduction to Databases" → "Databases"; long names keep their first words
+function short(name: string) {
+  const n = name.replace(/^(Intro(duction)? to)\s+/i, "")
+  return n.length <= 24 ? n : n.split(" ").slice(0, 2).join(" ")
+}
 
-function Pill({ ok, icon, text }: { ok: boolean; icon: React.ReactNode; text: string }) {
+function Chip({ ok, icon, text }: { ok: boolean; icon: React.ReactNode; text: string }) {
   return (
-    <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md ${ok ? "bg-emerald-400/15 text-emerald-400" : `bg-card ${muted}`}`}>{icon}{text}</span>
+    <span className={`flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-full ${ok ? "bg-[hsl(var(--foreground))] text-[hsl(var(--background))]" : "bg-[hsl(var(--card)/0.75)]"}`}>{icon}{text}</span>
   )
 }
 

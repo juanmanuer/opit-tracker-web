@@ -12,12 +12,21 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: "#0a0b10",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#E9EBF0" },
+    { media: "(prefers-color-scheme: dark)", color: "#0E0F14" },
+  ],
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Bento design: Space Grotesk for headings and numbers, Inter for text */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+      </head>
       <body className="font-sans antialiased">
         <Providers>{children}</Providers>
       </body>
