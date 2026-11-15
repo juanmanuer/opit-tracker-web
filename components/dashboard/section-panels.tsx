@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
-import { GradeCalculator } from "@/components/dashboard/grade-calculator"
+import { GradeCenter } from "@/components/dashboard/grade-center"
 import {
   initialAssessments,
   initialPractices,
@@ -309,18 +309,20 @@ export function GradesPanel({ activeTerm }: PanelProps) {
   const [loading, setLoading] = useState(false)
   const [lastSynced, setLastSynced] = useState<string | null>(null)
   const [showCalculator, setShowCalculator] = useState(false)
+  const [syncError, setSyncError] = useState<string | null>(null)
 
   const sync = async () => {
     setLoading(true)
+    setSyncError(null)
     try {
       const res = await fetch(`/api/canvas/sync?term=${encodeURIComponent(activeTerm)}`)
       const data = await res.json()
-      if (Array.isArray(data)) {
-        setCanvasData(data)
-        setLastSynced(new Date().toLocaleTimeString())
-      }
+      if (!res.ok || !Array.isArray(data)) throw new Error(data?.error ?? `HTTP ${res.status}`)
+      setCanvasData(data)
+      setLastSynced(new Date().toLocaleTimeString())
     } catch (err) {
       console.error("Sync failed:", err)
+      setSyncError(`Sync failed: ${String(err).replace("Error: ", "")}`)
     } finally {
       setLoading(false)
     }
@@ -328,18 +330,19 @@ export function GradesPanel({ activeTerm }: PanelProps) {
 
   return (
     <div className="flex flex-col gap-3">
-      {showCalculator && <GradeCalculator activeTerm={activeTerm} onClose={() => setShowCalculator(false)} />}
+      {showCalculator && <GradeCenter activeTerm={activeTerm} onClose={() => setShowCalculator(false)} />}
       <div className="flex items-center justify-between">
         <p className="text-[10px] font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">Grades</p>
         <div className="flex items-center gap-2">
           <button onClick={() => setShowCalculator(true)} className="flex items-center gap-1 text-[10px] font-medium px-2 py-1 rounded-md bg-[hsl(var(--secondary)/0.15)] text-[hsl(var(--secondary))] hover:bg-[hsl(var(--secondary)/0.25)] transition-colors">
-            ⌗ Calculator
+            ◔ Grade center
           </button>
           <button onClick={sync} className="flex items-center gap-1 text-[10px] font-medium px-2 py-1 rounded-md bg-[hsl(var(--primary)/0.15)] text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary)/0.25)] transition-colors disabled:opacity-50">
             {loading ? "Syncing..." : "⟳ Sync Canvas"}
           </button>
         </div>
       </div>
+      {syncError && <p className="text-[10px] text-[hsl(var(--destructive))]">{syncError}</p>}
       {lastSynced && <p className="text-[9px] text-[hsl(var(--muted-foreground))]">Last synced: {lastSynced}</p>}
       {canvasData.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-4 text-center">
@@ -383,7 +386,8 @@ function getCourseColor(code: string): string {
     "COMP-2002": "#059669", "COMP-2003": "#DC2626", "COMP-2004": "#D97706",
     "COMP-2005": "#7C3AED",
   }
-  return colors[code] ?? "#6B7280"
+  const fromTerms = Object.values(TERM_COURSES).flat().find((c) => c.code === code)?.color
+  return colors[code] ?? fromTerms ?? "#6B7280"
 }
 
 export function MiscPanel({ activeTerm }: PanelProps) {

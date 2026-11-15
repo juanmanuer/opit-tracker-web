@@ -3,25 +3,17 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { sql } from "@/lib/db"
 import { gradeChangeEmailHtml } from "@/lib/email"
+import { CANVAS_COURSE_IDS } from "@/lib/grades"
+import { TERM_COURSES, type Term } from "@/lib/store"
 
 const CANVAS_DOMAIN = process.env.CANVAS_DOMAIN
 const CANVAS_TOKEN = process.env.CANVAS_TOKEN
 
-const TERM_COURSES: Record<string, { id: number; code: string; name: string }[]> = {
-  "Term 1": [
-    { id: 453, code: "COMP-1001", name: "Technical English" },
-    { id: 446, code: "COMP-1002", name: "Computer Networks" },
-    { id: 454, code: "COMP-1003", name: "Programming Principles" },
-    { id: 447, code: "COMP-1004", name: "Computer Architectures" },
-    { id: 455, code: "COMP-1005", name: "ICT Fundamentals" },
-  ],
-  "Term 2": [
-    { id: 448, code: "COMP-2001", name: "Foundational Mathematics" },
-    { id: 456, code: "COMP-2002", name: "Web Development" },
-    { id: 449, code: "COMP-2003", name: "Introduction to Operating Systems" },
-    { id: 450, code: "COMP-2004", name: "Data Structures and Algorithms" },
-    { id: 457, code: "COMP-2005", name: "Project Management and QA" },
-  ],
+// Canvas course IDs live in lib/grades.ts (CANVAS_COURSE_IDS)
+function getTermCourses(term: string) {
+  const ids = CANVAS_COURSE_IDS[term] ?? {}
+  const names = Object.fromEntries((TERM_COURSES[term as Term] ?? []).map(c => [c.code, c.name]))
+  return Object.entries(ids).map(([code, id]) => ({ id, code, name: names[code] ?? code }))
 }
 
 async function canvasFetch(path: string) {
@@ -66,39 +58,45 @@ export async function GET(req: Request) {
 
     const userEmail = session.user.email
     const { searchParams } = new URL(req.url)
-    const term = searchParams.get("term") ?? "Term 2"
-    const courses = TERM_COURSES[term] ?? TERM_COURSES["Term 2"]
+    const term = searchParams.get("term") ?? "Term 3"
+    const courses = getTermCourses(term)
+    if (courses.length === 0) {
+      return NextResponse.json({ error: `No Canvas courses configured for ${term}` }, { status: 400 })
+    }
+    if (!CANVAS_DOMAIN || !CANVAS_TOKEN) {
+      return NextResponse.json({ error: "Canvas is not configured (CANVAS_DOMAIN / CANVAS_TOKEN missing)" }, { status: 500 })
+    }
 
     const results = await Promise.all(
       courses.map(async (course) => {
-        const [assignments, grades] = await Promise.all([
-          canvasFetch(`/courses/${course.id}/assignments?per_page=50&order_by=due_at`),
-          canvasFetch(`/courses/${course.id}/enrollments?user_id=self`),
-        ])
+        try {
+          const [assignments, grades] = await Promise.all([
+            canvasFetch(`/courses/${course.id}/assignments?per_page=50&order_by=due_at`),
+            canvasFetch(`/courses/${course.id}/enrollments?user_id=self`),
+          ])
 
-        const upcoming = assignments
-          .filter((a: any) => a.due_at && new Date(a.due_at) > new Date())
-          .map((a: any) => ({
-            id: a.id,
-            title: a.name,
-            dueAt: a.due_at,
-            pointsPossible: a.points_possible,
-            htmlUrl: a.html_url,
-          }))
+          const upcoming = assignments
+            .filter((a: any) => a.due_at && new Date(a.due_at) > new Date())
+            .map((a: any) => ({
+              id: a.id,
+              title: a.name,
+              dueAt: a.due_at,
+              pointsPossible: a.points_possible,
+              htmlUrl: a.html_url,
+            }))
 
-        const enrollment = grades[0]
-        const gradeInfo = enrollment ? {
-          currentScore: enrollment.grades?.current_score,
-          finalScore: enrollment.grades?.final_score,
-          currentGrade: enrollment.grades?.current_grade,
-          finalGrade: enrollment.grades?.final_grade,
-        } : null
+          const enrollment = grades[0]
+          const gradeInfo = enrollment ? {
+            currentScore: enrollment.grades?.current_score,
+            finalScore: enrollment.grades?.final_score,
+            currentGrade: enrollment.grades?.current_grade,
+            finalGrade: enrollment.grades?.final_grade,
+          } : null
 
-        return {
-          courseCode: course.code,
-          courseName: course.name,
-          upcoming,
-          gradeInfo,
+          return { courseCode: course.code, courseName: course.name, upcoming, gradeInfo, error: null }
+        } catch (err) {
+          // One course failing must not break the whole sync
+          return { courseCode: course.code, courseName: course.name, upcoming: [], gradeInfo: null, error: String(err) }
         }
       })
     )
@@ -111,44 +109,41 @@ export async function GET(req: Request) {
       newScore: number
     }[] = []
 
+    // Canvas course totals are stored in canvas_scores — separate from the
+    // manual per-assessment scores in grade_scores, which are never touched here.
+    await sql`
+      CREATE TABLE IF NOT EXISTS canvas_scores (
+        email       TEXT NOT NULL,
+        term        TEXT NOT NULL,
+        course_code TEXT NOT NULL,
+        score       NUMERIC NOT NULL,
+        updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+        PRIMARY KEY (email, term, course_code)
+      )
+    `
+    const previous = await sql`
+      SELECT course_code, score FROM canvas_scores
+      WHERE email = ${userEmail} AND term = ${term}
+    `
+    const isFirstSync = previous.length === 0 // first run: store silently, no email
+
     for (const result of results) {
       const newScore = result.gradeInfo?.currentScore
       if (newScore === null || newScore === undefined) continue
 
-      // Get previously stored score
-      const existing = await sql`
-        SELECT score FROM grade_scores
-        WHERE email = ${userEmail}
-          AND term = ${term}
-          AND course_code = ${result.courseCode}
-        LIMIT 1
-      `
+      const prev = previous.find((r: any) => r.course_code === result.courseCode)
+      const oldScore = prev ? Number(prev.score) : null
+      if (oldScore === Number(newScore)) continue
 
-      const oldScore = existing.length > 0 ? Number(existing[0].score) : null
-
-      // If score changed (or is new), record it
-      if (oldScore !== newScore) {
-        changes.push({
-          courseCode: result.courseCode,
-          courseName: result.courseName,
-          oldScore,
-          newScore,
-        })
-
-        // Upsert the new score
-        await sql`
-  INSERT INTO grade_scores (id, email, term, course_code, score, assessment_index)
-  VALUES (
-    ${`${userEmail}-${term}-${result.courseCode}`},
-    ${userEmail},
-    ${term},
-    ${result.courseCode},
-    ${newScore},
-    ${0}
-  )
-  ON CONFLICT (email, term, course_code, assessment_index) DO UPDATE SET score = ${newScore}
-`
+      if (!isFirstSync) {
+        changes.push({ courseCode: result.courseCode, courseName: result.courseName, oldScore, newScore })
       }
+      await sql`
+        INSERT INTO canvas_scores (email, term, course_code, score)
+        VALUES (${userEmail}, ${term}, ${result.courseCode}, ${newScore})
+        ON CONFLICT (email, term, course_code)
+        DO UPDATE SET score = ${newScore}, updated_at = now()
+      `
     }
 
     // Send email if anything changed

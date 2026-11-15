@@ -42,3 +42,27 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: String(error) }, { status: 500 })
   }
 }
+// Clears ONE score (one assessment of one course) — used when you empty a box
+export async function DELETE(req: Request) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.email) return NextResponse.json({}, { status: 401 })
+
+    const { term, courseCode, assessmentIndex } = await req.json()
+    if (!term || !courseCode || typeof assessmentIndex !== "number") {
+      return NextResponse.json({ error: "term, courseCode and assessmentIndex are required" }, { status: 400 })
+    }
+
+    await sql`
+      DELETE FROM grade_scores
+      WHERE email = ${session.user.email}
+        AND term = ${term}
+        AND course_code = ${courseCode}
+        AND assessment_index = ${assessmentIndex}
+    `
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("DELETE grades error:", error)
+    return NextResponse.json({ error: String(error) }, { status: 500 })
+  }
+}
