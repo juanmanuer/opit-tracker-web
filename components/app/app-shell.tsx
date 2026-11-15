@@ -11,6 +11,7 @@ import { useAcademic } from "@/hooks/use-academic"
 import { TodayView } from "@/components/app/today-view"
 import { CoursesView } from "@/components/app/courses-view"
 import { CommandPalette } from "@/components/app/command-palette"
+import { InstallButton } from "@/components/app/install-button"
 import { GradeCenter } from "@/components/dashboard/grade-center"
 import { PlanView } from "@/components/app/plan-view"
 import { ExportButton } from "@/components/dashboard/export-button"
@@ -85,6 +86,7 @@ export function AppShell() {
           )
         })}
         <div className="mt-auto flex flex-col items-center gap-2">
+          <InstallButton compact />
           <button onClick={() => setTheme(isDark ? "light" : "dark")} title="Toggle theme" className={`h-9 w-9 rounded-xl flex items-center justify-center hover:bg-[hsl(var(--muted))] ${muted}`}>
             {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
@@ -112,6 +114,7 @@ export function AppShell() {
               <Search className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Search…</span>
               <kbd className="hidden sm:inline font-mono text-[10px] px-1.5 py-0.5 rounded bg-[hsl(var(--muted))]">Ctrl K</kbd>
             </button>
+            <span className="md:hidden"><InstallButton /></span>
             <ExportButton activeTerm={term} />
             <button onClick={() => setTheme(isDark ? "light" : "dark")} aria-label="Toggle theme" className={`md:hidden h-8 w-8 rounded-lg flex items-center justify-center ${muted}`}>
               {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}

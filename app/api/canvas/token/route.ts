@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { getTokenStatus, saveManualToken, renewToken } from "@/lib/canvas-token"
 import { sendTestAlert } from "@/lib/grade-alerts"
+import { weeklyDigest } from "@/lib/digest"
 
 // GET  → token status (never returns the token itself)
 export async function GET() {
@@ -21,6 +22,10 @@ export async function POST(req: Request) {
   if (!session?.user?.email) return NextResponse.json({}, { status: 401 })
   try {
     const body = await req.json()
+    if (body.action === "test-digest") {
+      const r = await weeklyDigest()
+      return NextResponse.json({ ...(await getTokenStatus()), digest: r })
+    }
     if (body.action === "test-alert") {
       const r = await sendTestAlert(session.user.email)
       return NextResponse.json({ ...(await getTokenStatus()), testAlert: r })

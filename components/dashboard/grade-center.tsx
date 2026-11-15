@@ -302,6 +302,10 @@ export function GradeCenter({ activeTerm, onClose, embedded = false, onDataChang
                 className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))] disabled:opacity-50">
                 Send test alert
               </button>
+              <button onClick={() => tokenAction({ action: "test-digest" }, "Weekly summary sent. Check your email and phone.")} disabled={tokenBusy}
+                className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))] disabled:opacity-50">
+                Send weekly summary now
+              </button>
               <button onClick={() => tokenAction({ action: "renew" }, "Renewed. Automatic renewal is on.")} disabled={tokenBusy || token?.source === "none"}
                 className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))] disabled:opacity-50">
                 <RefreshCw className={`h-3.5 w-3.5 ${tokenBusy ? "animate-spin" : ""}`} /> Renew now

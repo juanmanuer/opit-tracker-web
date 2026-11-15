@@ -6,6 +6,9 @@ import "./globals.css"
 export const metadata: Metadata = {
   title: "OPIT Tracker - Developed by Juan M. Aguilar",
   description: "Track your assessments, practices, grades, and attendance across all terms.",
+  applicationName: "OPIT Tracker",
+  appleWebApp: { capable: true, title: "OPIT", statusBarStyle: "black-translucent" },
+  formatDetection: { telephone: false },
 }
 
 export const viewport: Viewport = {
