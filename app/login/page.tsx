@@ -62,14 +62,14 @@ export default function LoginPage() {
         @keyframes scan { 0% { transform: translateY(-100%) } 100% { transform: translateY(100%) } }
         .orb { position:absolute; border-radius:9999px; filter: blur(80px); animation: drift 16s ease-in-out infinite; }
         .token { position:absolute; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: #93c5fd; white-space: nowrap; animation: float 9s linear infinite; }
-        .caret { display:inline-block; width:8px; height:15px; background:#5eead4; vertical-align:-2px; animation: blink 1s step-end infinite; }
-        .card-glow { background: conic-gradient(from 180deg at 50% 50%, #22d3ee, #a78bfa, #f472b6, #22d3ee); }
+        .caret { display:inline-block; width:8px; height:15px; background:#C7F25B; vertical-align:-2px; animation: blink 1s step-end infinite; }
+        .card-glow { background: conic-gradient(from 180deg at 50% 50%, #C7F25B, #22d3ee, #a78bfa, #C7F25B); }
         @media (prefers-reduced-motion: reduce) { .orb, .token, .caret { animation: none } }
       `}</style>
 
       {/* Background layers */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-        <div className="orb h-[420px] w-[420px] bg-cyan-500/30 -top-24 -left-20" />
+        <div className="orb h-[420px] w-[420px] bg-lime-300/20 -top-24 -left-20" />
         <div className="orb h-[480px] w-[480px] bg-violet-600/30 top-1/3 -right-32" style={{ animationDelay: "-5s" }} />
         <div className="orb h-[360px] w-[360px] bg-fuchsia-500/20 -bottom-24 left-1/4" style={{ animationDelay: "-9s" }} />
         <div className="grid-bg absolute inset-0" />
@@ -78,7 +78,7 @@ export default function LoginPage() {
             style={{
               // two side columns, one token per row, staggered — never overlapping the card or each other
               left: `${i % 2 ? 78 + (Math.floor(i / 2) % 3) * 5 : 3 + (Math.floor(i / 2) % 3) * 5}%`,
-              top: `${14 + Math.floor(i / 2) * (78 / Math.ceil(TOKENS.length / 2))}%`,
+              top: `${20 + Math.floor(i / 2) * (72 / Math.ceil(TOKENS.length / 2))}%`, // start below the header (brand + signature)
               animationDelay: `${-(i * 1.7) % 9}s`, animationDuration: `${9 + (i % 4)}s`,
             }}>
             {t}
@@ -90,10 +90,10 @@ export default function LoginPage() {
         {/* Top bar */}
         <header className="flex items-center justify-between px-6 py-5">
           <div className="flex items-center gap-3">
-            <img src="/icon-192.png" alt="" className="h-9 w-9 rounded-xl shadow-lg shadow-cyan-500/30" />
+            <span className="h-10 w-10 rounded-2xl bg-[#C7F25B] text-[#12131A] flex items-center justify-center font-display font-bold text-sm shadow-lg shadow-lime-300/20">OT</span>
             <div className="leading-tight">
-              <p className="text-sm font-semibold tracking-wide">OPIT Tracker</p>
-              <p className="text-[10px] text-slate-400 font-mono">v2.0 · academic command center</p>
+              <p className="font-display text-[15px] font-bold">OPIT Tracker</p>
+              <p className="font-display text-[11px] text-slate-400">by Juan M. Aguilar</p>
             </div>
             {hasOpitLogo && (
               <img src="/opit-logo.svg" alt="OPIT" className="h-6 ml-3 pl-3 border-l border-white/15 opacity-90" />
@@ -108,8 +108,8 @@ export default function LoginPage() {
         <main className="flex-1 flex flex-col items-center justify-center px-4 pb-10 gap-8">
           <div className="text-center max-w-xl">
             <p className="font-mono text-xs text-cyan-300/90 mb-3">// BSc Modern Computer Science</p>
-            <h1 className="text-3xl sm:text-5xl font-bold tracking-tight">
-              Your degree, <span className="bg-gradient-to-r from-cyan-300 via-violet-300 to-fuchsia-300 bg-clip-text text-transparent">compiled.</span>
+            <h1 className="font-display text-4xl sm:text-6xl font-bold">
+              Your degree, <span className="text-[#C7F25B]">compiled.</span>
             </h1>
             <p className="mt-3 text-sm sm:text-base text-slate-300">Grades, live sessions, attendance and deadlines. One dashboard, synced with Canvas.</p>
           </div>
@@ -119,8 +119,8 @@ export default function LoginPage() {
             <div className="card-glow absolute -inset-[1.5px] rounded-3xl opacity-70 blur-[2px]" />
             <div className="relative rounded-3xl bg-slate-900/80 backdrop-blur-xl border border-white/10 p-7 sm:p-8 shadow-2xl">
               <p className="font-mono text-[11px] text-slate-400">$ auth login --provider google</p>
-              <h2 className="mt-2 text-xl font-semibold">Sign in</h2>
-              <p className="mt-1 text-sm text-slate-400">Use your OPIT student account to continue.</p>
+              <h2 className="mt-2 font-display text-2xl font-semibold">Sign in</h2>
+              <p className="mt-1 text-sm text-slate-400">Use your OPIT Google account to continue.</p>
 
               {error && (
                 <div className="mt-4 rounded-xl border border-red-400/30 bg-red-500/10 px-3.5 py-2.5 text-xs text-red-300 font-mono">✗ {error}</div>
@@ -168,7 +168,7 @@ export default function LoginPage() {
         </main>
 
         <footer className="px-6 pb-6 text-center text-[11px] text-slate-500 font-mono">
-          built by Juan M. Aguilar · Next.js · Neon Postgres · Vercel ·{" "}
+          designed &amp; built by <span className="text-slate-300">Juan Manuel Aguilar</span> · Next.js · Neon Postgres · Vercel ·{" "}
           <a href="/privacy" className="underline hover:text-slate-300">privacy</a>
         </footer>
       </div>

@@ -7,6 +7,7 @@ import { coursesOf, nextSessions, formatCountdown, daysUntil } from "@/lib/acade
 import { termData } from "@/lib/catalog"
 import { useCatalog } from "@/components/app/catalog-gate"
 import { CourseInfoCard } from "@/components/app/course-info-card"
+import { tint } from "@/components/app/today-view"
 
 const muted = "text-[hsl(var(--muted-foreground))]"
 const fg = "text-[hsl(var(--foreground))]"
@@ -25,7 +26,7 @@ export function TeacherView({ term }: { term: string }) {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className={`text-xl font-semibold ${fg}`}>Your courses · {term}</h1>
+        <h1 className="font-display text-[30px] font-semibold">Your courses · {term}</h1>
         <p className={`text-xs ${muted}`}>
           Students using OPIT Tracker get reminders and the Zoom button from the course info below. Keep the live-session time and Zoom details up to date and the whole class benefits.
         </p>
@@ -39,29 +40,29 @@ export function TeacherView({ term }: { term: string }) {
         const next = sessions.find(s => s.professor.courseCode === c.code)
         const weights = td.weights[c.code] ?? []
         return (
-          <div key={c.code} className="rounded-2xl bg-card border border-border p-4 flex flex-col gap-3" style={{ borderLeft: `3px solid ${c.color}` }}>
+          <div key={c.code} className="rounded-3xl p-5 sm:p-6 flex flex-col gap-3.5" style={{ background: tint(c.color, 20) }}>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-mono font-semibold" style={{ color: c.color }}>{c.code}</p>
-                <p className={`text-base font-semibold ${fg}`}>{c.name}</p>
+                <p className="font-display text-xs font-semibold tracking-wider uppercase">{c.code}</p>
+                <p className="font-display text-2xl font-semibold leading-tight">{c.name}</p>
                 {weights.length > 0 && <p className={`text-[11px] ${muted}`}>Assessments: {weights.map((w, i) => `A${i + 1} ${w}%`).join(" · ")}</p>}
               </div>
               {c.canvasId && (
                 <span className="flex gap-1.5 text-xs">
-                  <a href={`${CANVAS}/courses/${c.canvasId}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-border hover:bg-[hsl(var(--muted))]"><ExternalLink className="h-3.5 w-3.5" /> Canvas</a>
-                  <a href={`${CANVAS}/courses/${c.canvasId}/gradebook`} target="_blank" rel="noreferrer" className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-border hover:bg-[hsl(var(--muted))]"><Users className="h-3.5 w-3.5" /> Gradebook</a>
+                  <a href={`${CANVAS}/courses/${c.canvasId}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[hsl(var(--card)/0.8)] font-medium hover:bg-[hsl(var(--card))]"><ExternalLink className="h-3.5 w-3.5" /> Canvas</a>
+                  <a href={`${CANVAS}/courses/${c.canvasId}/gradebook`} target="_blank" rel="noreferrer" className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[hsl(var(--card)/0.8)] font-medium hover:bg-[hsl(var(--card))]"><Users className="h-3.5 w-3.5" /> Gradebook</a>
                 </span>
               )}
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl bg-[hsl(var(--muted)/0.4)] p-3">
+              <div className="rounded-2xl bg-[hsl(var(--card)/0.85)] p-4">
                 <p className={`text-[11px] font-medium flex items-center gap-1.5 ${muted}`}><Radio className="h-3.5 w-3.5" /> Next live session</p>
                 {next
                   ? <p className={`text-sm ${fg}`}>{fmt(next.start)} <span className={`text-xs ${muted}`}>· {formatCountdown(next.start, now)}</span></p>
                   : <p className={`text-xs ${muted}`}>No time set yet — add it in the course info.</p>}
               </div>
-              <div className="rounded-xl bg-[hsl(var(--muted)/0.4)] p-3">
+              <div className="rounded-2xl bg-[hsl(var(--card)/0.85)] p-4">
                 <p className={`text-[11px] font-medium flex items-center gap-1.5 ${muted}`}><CalendarClock className="h-3.5 w-3.5" /> Upcoming deadlines {past > 0 && <span>· {past} past</span>}</p>
                 {upcoming.length === 0 && <p className={`text-xs ${muted}`}>Nothing due.</p>}
                 {upcoming.slice(0, 3).map(a => {

@@ -35,9 +35,9 @@ export function CourseInfoCard({ term, code }: { term: string; code: string }) {
   if (editing) return <CourseInfoEditor term={term} code={code} onDone={c => { if (c) setCatalog(c); setEditing(false) }} />
 
   return (
-    <div className="rounded-2xl bg-[hsl(var(--muted)/0.5)] px-4 py-3 flex flex-col gap-2 text-xs">
+    <div className="rounded-3xl bg-card px-5 py-4 sm:px-6 flex flex-col gap-3 text-xs">
       {missingLive && canEdit && (
-        <button onClick={() => setEditing(true)} className="flex items-center gap-2 text-left rounded-lg border border-dashed border-amber-400/60 bg-amber-400/10 px-3 py-2 text-amber-600 dark:text-amber-400">
+        <button onClick={() => setEditing(true)} className="flex items-center gap-2 text-left rounded-2xl bg-[hsl(var(--lime))] text-[hsl(var(--lime-foreground))] px-4 py-3">
           <Radio className="h-3.5 w-3.5 shrink-0" />
           <span>Canvas doesn't say when the live sessions are. <b>Add the time once</b> and everyone in this course gets reminders and a Zoom button.</span>
         </button>
@@ -48,11 +48,11 @@ export function CourseInfoCard({ term, code }: { term: string; code: string }) {
         {prof?.officeHours && <span className={`flex items-center gap-1.5 ${muted}`}><Clock className="h-3.5 w-3.5" /> Office hours: {clean(prof.officeHours)}</span>}
         {!!prof?.tutors?.length && <span className={`flex items-center gap-1.5 ${muted}`}><Users className="h-3.5 w-3.5" /> {prof.tutors.join(", ")}</span>}
         <span className="flex flex-wrap gap-1.5 ml-auto">
-          {prof?.meetingId && <a href={zoomUrl(prof.meetingId)} target="_blank" rel="noreferrer" className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-border hover:bg-card"><Video className="h-3.5 w-3.5" /> Zoom</a>}
-          {prof?.passcode && <button onClick={() => copy(prof.passcode, "pass")} className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-border hover:bg-card"><Copy className="h-3.5 w-3.5" /> {copied === "pass" ? "Copied" : "Passcode"}</button>}
-          {prof?.recordingPassword && <button onClick={() => copy(prof.recordingPassword, "rec")} className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-border hover:bg-card"><Copy className="h-3.5 w-3.5" /> {copied === "rec" ? "Copied" : "Recording pwd"}</button>}
-          {prof?.email && <a href={`mailto:${prof.email}`} className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-border hover:bg-card"><Mail className="h-3.5 w-3.5" /> Email</a>}
-          {canEdit && <button onClick={() => setEditing(true)} className={`flex items-center gap-1 px-2.5 py-1 rounded-md border border-border hover:bg-card ${muted}`}><Pencil className="h-3.5 w-3.5" /> Edit</button>}
+          {prof?.meetingId && <a href={zoomUrl(prof.meetingId)} target="_blank" rel="noreferrer" className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[hsl(var(--muted))] hover:bg-[hsl(var(--lime))] hover:text-[hsl(var(--lime-foreground))] font-medium transition-colors"><Video className="h-3.5 w-3.5" /> Zoom</a>}
+          {prof?.passcode && <button onClick={() => copy(prof.passcode, "pass")} className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[hsl(var(--muted))] hover:bg-[hsl(var(--lime))] hover:text-[hsl(var(--lime-foreground))] font-medium transition-colors"><Copy className="h-3.5 w-3.5" /> {copied === "pass" ? "Copied" : "Passcode"}</button>}
+          {prof?.recordingPassword && <button onClick={() => copy(prof.recordingPassword, "rec")} className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[hsl(var(--muted))] hover:bg-[hsl(var(--lime))] hover:text-[hsl(var(--lime-foreground))] font-medium transition-colors"><Copy className="h-3.5 w-3.5" /> {copied === "rec" ? "Copied" : "Recording pwd"}</button>}
+          {prof?.email && <a href={`mailto:${prof.email}`} className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[hsl(var(--muted))] hover:bg-[hsl(var(--lime))] hover:text-[hsl(var(--lime-foreground))] font-medium transition-colors"><Mail className="h-3.5 w-3.5" /> Email</a>}
+          {canEdit && <button onClick={() => setEditing(true)} className={`flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[hsl(var(--muted))] hover:bg-[hsl(var(--lime))] hover:text-[hsl(var(--lime-foreground))] font-medium transition-colors ${muted}`}><Pencil className="h-3.5 w-3.5" /> Edit</button>}
         </span>
       </div>
       {prof?.infoUpdatedAt && prof.infoUpdatedBy !== "built-in" && (
@@ -97,7 +97,7 @@ function CourseInfoEditor({ term, code, onDone }: { term: string; code: string; 
     onDone(data.catalog)
   }
 
-  const input = "text-xs rounded-md px-2 py-1.5 bg-background border border-border outline-none focus:border-[hsl(var(--primary))]"
+  const input = "text-xs rounded-xl px-2.5 py-2 bg-[hsl(var(--muted))] outline-none focus:ring-2 focus:ring-[hsl(var(--foreground))]"
   // plain function (not a component) so inputs keep focus while typing
   const slot = (d: keyof typeof f, s: keyof typeof f, e: keyof typeof f) => (
     <div className="flex flex-wrap items-center gap-1.5">
@@ -107,7 +107,7 @@ function CourseInfoEditor({ term, code, onDone }: { term: string; code: string; 
   )
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 flex flex-col gap-3 text-xs">
+    <div className="rounded-3xl bg-card p-5 sm:p-6 flex flex-col gap-3 text-xs">
       <p className={`flex items-center gap-1.5 ${muted}`}><Info className="h-3.5 w-3.5" /> Shared with everyone enrolled in this course. Times in Malta / Brussels time.</p>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1">Live session{slot("liveDay", "liveStart", "liveEnd")}</label>
@@ -125,8 +125,8 @@ function CourseInfoEditor({ term, code, onDone }: { term: string; code: string; 
       <div className="flex items-center gap-2">
         {err && <span className="text-[hsl(var(--destructive))]">{err}</span>}
         <span className="ml-auto flex gap-2">
-          <button onClick={() => onDone()} className={`px-3 py-1.5 rounded-md border border-border ${muted}`}>Cancel</button>
-          <button onClick={save} disabled={busy} className="px-3 py-1.5 rounded-md font-medium bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] disabled:opacity-50">{busy ? "Saving…" : "Save for everyone"}</button>
+          <button onClick={() => onDone()} className={`px-3.5 py-2 rounded-xl bg-[hsl(var(--muted))] font-medium ${muted}`}>Cancel</button>
+          <button onClick={save} disabled={busy} className="px-3.5 py-2 rounded-xl font-display font-semibold bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] disabled:opacity-50">{busy ? "Saving…" : "Save for everyone"}</button>
         </span>
       </div>
     </div>

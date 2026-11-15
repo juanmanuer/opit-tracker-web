@@ -9,7 +9,7 @@ import { useCatalog } from "@/components/app/catalog-gate"
 
 const muted = "text-[hsl(var(--muted-foreground))]"
 const fg = "text-[hsl(var(--foreground))]"
-const card = "rounded-2xl bg-card border border-border"
+const card = "rounded-3xl bg-card"
 const DAY = 86_400_000
 type Tab = "runway" | "week" | "agenda"
 
@@ -45,22 +45,22 @@ export function PlanView({ term, academic, onOpenCourse }: { term: string; acade
   const color = (code: string | null) => courses.find(c => c.code === code)?.color ?? "#6B7280"
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3.5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-1 p-0.5 rounded-full bg-[hsl(var(--muted))]" role="tablist">
+        <div className="flex items-center gap-1 p-1 rounded-2xl bg-card font-display" role="tablist" aria-label="Plan view">
           {(["runway", "week", "agenda"] as Tab[]).map(t => (
             <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
-              className={`text-xs font-medium px-3.5 py-1.5 rounded-full capitalize transition-colors ${tab === t ? "bg-card shadow-sm text-[hsl(var(--foreground))]" : `${muted} hover:text-[hsl(var(--foreground))]`}`}>
+              className={`text-sm px-4 py-2 rounded-xl capitalize transition-colors ${tab === t ? "bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] font-semibold" : `${muted} font-medium hover:text-[hsl(var(--foreground))]`}`}>
               {t}
             </button>
           ))}
         </div>
         <div className="flex items-center gap-2">
-          <span className={`text-[11px] ${canvasState === "error" ? "text-amber-400" : muted}`}>
+          <span className={`text-[11px] font-medium ${canvasState === "error" ? "text-[hsl(var(--destructive))]" : muted}`}>
             {canvasState === "loading" ? "Loading Canvas dates…" : canvasState === "ok" ? "Dates from Canvas" : "Canvas unavailable · using saved dates"}
           </span>
-          <button onClick={() => { setShowAdd(p => !p); setShowFeed(false) }} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))]"><Plus className="h-3.5 w-3.5" /> Event</button>
-          <button onClick={() => { setShowFeed(p => !p); setShowAdd(false) }} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))]"><Rss className="h-3.5 w-3.5" /> Subscribe</button>
+          <button onClick={() => { setShowAdd(p => !p); setShowFeed(false) }} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl bg-card hover:bg-[hsl(var(--lime))] hover:text-[hsl(var(--lime-foreground))] font-medium transition-colors"><Plus className="h-3.5 w-3.5" /> Event</button>
+          <button onClick={() => { setShowFeed(p => !p); setShowAdd(false) }} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl bg-card hover:bg-[hsl(var(--lime))] hover:text-[hsl(var(--lime-foreground))] font-medium transition-colors"><Rss className="h-3.5 w-3.5" /> Subscribe</button>
         </div>
       </div>
 
@@ -124,10 +124,10 @@ function Runway({ term, items, academic, color, now, selected, onSelect }: {
         <p className={`text-sm font-medium ${fg}`}>
           {rangeStart.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} – {addDays(rangeEnd, -1).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
         </p>
-        <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-[hsl(var(--muted))]">
+        <div className="flex items-center gap-0.5 p-1 rounded-xl bg-[hsl(var(--muted))]">
           {([["term", "Term"], ["8w", "8 weeks"], ["4w", "4 weeks"]] as const).map(([k, label]) => (
             <button key={k} onClick={() => setZoom(k)} disabled={k !== "term" && !nowInTerm}
-              className={`text-[11px] font-medium px-2.5 py-1 rounded-md transition-colors disabled:opacity-40 ${zoom === k ? "bg-card shadow-sm text-[hsl(var(--foreground))]" : muted}`}>{label}</button>
+              className={`text-[11px] font-medium px-2.5 py-1 rounded-lg transition-colors disabled:opacity-40 ${zoom === k ? "bg-card shadow-sm text-[hsl(var(--foreground))]" : muted}`}>{label}</button>
           ))}
         </div>
       </div>
@@ -177,7 +177,7 @@ function Runway({ term, items, academic, color, now, selected, onSelect }: {
               return (
                 <div key={c.code} className="relative flex border-b border-border last:border-0" style={{ height: rowH }}>
                   <div style={{ width: LABEL }} className="shrink-0 pr-3 flex flex-col justify-center bg-card z-10">
-                    <p className="text-[11px] font-mono font-semibold flex items-center gap-1.5" style={{ color: c.color }}>
+                    <p className="font-display text-xs font-semibold flex items-center gap-1.5">
                       <span className="h-2 w-2 rounded-full" style={{ backgroundColor: c.color }} />{c.code}
                     </p>
                     <p className={`text-xs truncate ${fg}`}>{c.name}</p>
@@ -303,13 +303,13 @@ function Week({ term, items, academic, color, now, onSelect }: {
     <div className={`${card} p-4`}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1">
-          <button aria-label="Previous week" onClick={() => setWeekStart(addDays(weekStart, -7))} className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-[hsl(var(--muted))]"><ChevronLeft className="h-4 w-4" /></button>
-          <button aria-label="Next week" onClick={() => setWeekStart(addDays(weekStart, 7))} className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-[hsl(var(--muted))]"><ChevronRight className="h-4 w-4" /></button>
+          <button aria-label="Previous week" onClick={() => setWeekStart(addDays(weekStart, -7))} className="h-9 w-9 rounded-xl bg-[hsl(var(--muted))] flex items-center justify-center hover:bg-[hsl(var(--muted))]"><ChevronLeft className="h-4 w-4" /></button>
+          <button aria-label="Next week" onClick={() => setWeekStart(addDays(weekStart, 7))} className="h-9 w-9 rounded-xl bg-[hsl(var(--muted))] flex items-center justify-center hover:bg-[hsl(var(--muted))]"><ChevronRight className="h-4 w-4" /></button>
           <p className={`text-sm font-medium ml-1 ${fg}`}>
             {weekNo >= 1 && weekNo <= 20 ? `Week ${weekNo} · ` : ""}{weekStart.getDate()} {weekStart.toLocaleDateString("en-GB", { month: "short" })} – {days[6].getDate()} {days[6].toLocaleDateString("en-GB", { month: "short" })}
           </p>
         </div>
-        <button onClick={() => setWeekStart(mondayOf(now))} className={`text-xs px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))] ${muted}`}>This week</button>
+        <button onClick={() => setWeekStart(mondayOf(now))} className={`text-xs px-3 py-1.5 rounded-xl bg-card hover:bg-[hsl(var(--lime))] hover:text-[hsl(var(--lime-foreground))] font-medium transition-colors ${muted}`}>This week</button>
       </div>
 
       <div className="overflow-x-auto">
@@ -320,7 +320,7 @@ function Week({ term, items, academic, color, now, onSelect }: {
             {days.map(d => {
               const today = sameDay(d, now)
               return (
-                <div key={d.toISOString()} className={`text-center rounded-lg py-1 ${today ? "bg-[hsl(var(--primary)/0.12)]" : ""}`}>
+                <div key={d.toISOString()} className={`text-center rounded-xl py-1 ${today ? "bg-[hsl(var(--lime))] text-[hsl(var(--lime-foreground))]" : ""}`}>
                   <p className={`text-[10px] ${today ? "text-[hsl(var(--primary))] font-semibold" : muted}`}>{d.toLocaleDateString("en-GB", { weekday: "short" })}</p>
                   <p className={`text-sm font-semibold ${today ? "text-[hsl(var(--primary))]" : fg}`}>{d.getDate()}</p>
                 </div>
@@ -430,7 +430,7 @@ function Agenda({ term, items, academic, color, now, onSelect }: {
                       </p>
                     </button>
                     {i.kind === "session" && prof?.meetingId && (
-                      <a href={zoomUrl(prof.meetingId)} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border border-border hover:bg-card shrink-0"><Video className="h-3 w-3" /> Zoom</a>
+                      <a href={zoomUrl(prof.meetingId)} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-xl bg-[hsl(var(--muted))] hover:bg-[hsl(var(--lime))] hover:text-[hsl(var(--lime-foreground))] transition-colors shrink-0"><Video className="h-3 w-3" /> Zoom</a>
                     )}
                     {i.kind === "deadline" && (() => {
                       const score = state.scores[term]?.[i.courseCode!]?.[i.assessmentIdx!]
@@ -470,7 +470,7 @@ function Detail({ item, term, academic, color, now, onClose, onOpenCourse, onTog
   return (
     <div className={`${card} p-4 flex flex-wrap items-center gap-x-6 gap-y-3`} style={{ borderLeft: `3px solid ${c}` }}>
       <div className="flex-1 min-w-[220px]">
-        <p className="text-[11px] font-mono font-semibold" style={{ color: c }}>{item.courseCode ?? "Personal"}</p>
+        <p className="font-display text-xs font-semibold tracking-wider uppercase" style={{ color: c }}>{item.courseCode ?? "Personal"}</p>
         <p className={`text-sm font-semibold ${fg}`}>{item.kind === "deadline" ? `${item.title} · ${item.weight}` : item.title}</p>
         <p className={`text-xs ${muted}`}>
           {fmtDay(item.start)}{!item.allDay && ` · ${fmtTime(item.start)}${item.kind !== "deadline" ? `–${fmtTime(item.end)}` : ""}`}
@@ -481,14 +481,14 @@ function Detail({ item, term, academic, color, now, onClose, onOpenCourse, onTog
       <div className="flex flex-wrap gap-2">
         {item.kind === "session" && isStudent && (
           <button onClick={() => onToggleAttendance(item.courseCode!, item.sessionNumber!)}
-            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border ${attended ? "border-emerald-400/50 text-emerald-400" : "border-border"}`}>
+            className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl ${attended ? "bg-[hsl(var(--foreground))] text-[hsl(var(--background))]" : "bg-[hsl(var(--lime))] text-[hsl(var(--lime-foreground))]"}`}>
             <Check className="h-3.5 w-3.5" /> {attended ? `Session ${item.sessionNumber} attended` : `Mark session ${item.sessionNumber} attended`}
           </button>
         )}
-        {item.kind === "session" && prof?.meetingId && <a href={zoomUrl(prof.meetingId)} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))]"><Video className="h-3.5 w-3.5" /> Zoom</a>}
-        {item.url && <a href={item.url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))]"><ExternalLink className="h-3.5 w-3.5" /> Open in Canvas</a>}
-        {item.courseCode && <button onClick={() => onOpenCourse(item.courseCode!)} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))]"><BookOpen className="h-3.5 w-3.5" /> Course</button>}
-        {item.kind === "personal" && <button onClick={() => onDeletePersonal(item.personalId!)} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border hover:text-[hsl(var(--destructive))]"><Trash2 className="h-3.5 w-3.5" /> Delete</button>}
+        {item.kind === "session" && prof?.meetingId && <a href={zoomUrl(prof.meetingId)} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl bg-card hover:bg-[hsl(var(--lime))] hover:text-[hsl(var(--lime-foreground))] font-medium transition-colors"><Video className="h-3.5 w-3.5" /> Zoom</a>}
+        {item.url && <a href={item.url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl bg-card hover:bg-[hsl(var(--lime))] hover:text-[hsl(var(--lime-foreground))] font-medium transition-colors"><ExternalLink className="h-3.5 w-3.5" /> Open in Canvas</a>}
+        {item.courseCode && <button onClick={() => onOpenCourse(item.courseCode!)} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl bg-card hover:bg-[hsl(var(--lime))] hover:text-[hsl(var(--lime-foreground))] font-medium transition-colors"><BookOpen className="h-3.5 w-3.5" /> Course</button>}
+        {item.kind === "personal" && <button onClick={() => onDeletePersonal(item.personalId!)} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl bg-[hsl(var(--muted))] hover:text-[hsl(var(--destructive))]"><Trash2 className="h-3.5 w-3.5" /> Delete</button>}
         <button onClick={onClose} aria-label="Close" className={`h-8 w-8 rounded-lg flex items-center justify-center hover:bg-[hsl(var(--muted))] ${muted}`}><X className="h-4 w-4" /></button>
       </div>
     </div>
@@ -513,7 +513,7 @@ function AddEvent({ term, onClose, onAdded }: { term: string; onClose: () => voi
     }).catch(() => null)
     if (res?.ok) onAdded(); else setError("Event NOT saved. Try again.")
   }
-  const input = "text-xs rounded-md px-2.5 py-1.5 bg-[hsl(var(--muted))] border border-border outline-none focus:border-[hsl(var(--primary))]"
+  const input = "text-xs rounded-xl px-3 py-2 bg-[hsl(var(--muted))] outline-none focus:ring-2 focus:ring-[hsl(var(--foreground))]"
   return (
     <div className={`${card} p-4 flex flex-col gap-2`}>
       <div className="flex items-center justify-between"><p className={`text-sm font-medium ${fg}`}>New event</p><button onClick={onClose} aria-label="Close" className={muted}><X className="h-4 w-4" /></button></div>
@@ -528,7 +528,7 @@ function AddEvent({ term, onClose, onAdded }: { term: string; onClose: () => voi
           <option value="">No course</option>
           {coursesOf(term).map(c => <option key={c.code} value={c.code}>{c.code}</option>)}
         </select>
-        <button onClick={save} className="text-xs font-medium px-3 py-1.5 rounded-lg bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]">Save</button>
+        <button onClick={save} className="font-display text-sm font-semibold px-4 py-2 rounded-xl bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]">Save</button>
       </div>
       {error && <p className="text-[11px] text-[hsl(var(--destructive))]">{error}</p>}
     </div>
@@ -557,19 +557,19 @@ function FeedPanel({ onClose }: { onClose: () => void }) {
         <button onClick={onClose} aria-label="Close" className={muted}><X className="h-4 w-4" /></button>
       </div>
       {url === undefined ? <p className={`text-xs ${muted}`}>Loading…</p> : url === null ? (
-        <button onClick={create} disabled={busy} className="self-start text-xs font-medium px-3 py-1.5 rounded-lg bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] disabled:opacity-50">Create my private link</button>
+        <button onClick={create} disabled={busy} className="self-start font-display text-sm font-semibold px-4 py-2 rounded-xl bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] disabled:opacity-50">Create my private link</button>
       ) : (
         <>
           <div className="flex gap-2">
-            <input readOnly value={url} className="flex-1 text-[11px] font-mono rounded-md px-2.5 py-1.5 bg-[hsl(var(--muted))] border border-border" onFocus={e => e.target.select()} />
+            <input readOnly value={url} className="flex-1 text-[11px] font-mono rounded-xl px-3 py-2 bg-[hsl(var(--muted))]" onFocus={e => e.target.select()} />
             <button onClick={() => { navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1500) }} className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border border-border">
               {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />} {copied ? "Copied" : "Copy"}
             </button>
           </div>
           <div className="flex flex-wrap gap-2">
-            <a href={`https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcal!)}`} target="_blank" rel="noreferrer" className="text-xs px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))]">Add to Google Calendar</a>
-            <a href={webcal} className="text-xs px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))]">Add to Apple Calendar</a>
-            <button onClick={create} disabled={busy} className={`text-xs px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))] ${muted}`}>Reset link</button>
+            <a href={`https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcal!)}`} target="_blank" rel="noreferrer" className="text-xs px-3 py-1.5 rounded-xl bg-card hover:bg-[hsl(var(--lime))] hover:text-[hsl(var(--lime-foreground))] font-medium transition-colors">Add to Google Calendar</a>
+            <a href={webcal} className="text-xs px-3 py-1.5 rounded-xl bg-card hover:bg-[hsl(var(--lime))] hover:text-[hsl(var(--lime-foreground))] font-medium transition-colors">Add to Apple Calendar</a>
+            <button onClick={create} disabled={busy} className={`text-xs px-3 py-1.5 rounded-xl bg-card hover:bg-[hsl(var(--lime))] hover:text-[hsl(var(--lime-foreground))] font-medium transition-colors ${muted}`}>Reset link</button>
           </div>
           <p className={`text-[10px] ${muted}`}>The link works like a password. If you share it by mistake, press Reset link and subscribe again.</p>
         </>

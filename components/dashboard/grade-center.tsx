@@ -7,6 +7,7 @@ import { getGrade, courseStats } from "@/lib/grades"
 import { gradedTerms, termData, allPractices, type WeightSource } from "@/lib/catalog"
 import { useCatalog } from "@/components/app/catalog-gate"
 import { AlertSettings, useAlertsAvailable } from "@/components/app/alert-settings"
+import { tint } from "@/components/app/today-view"
 
 type Scores = Record<string, (number | null)[]>          // courseCode -> scores per assessment
 type Bonus = { live: boolean | null; practices: boolean | null }
@@ -79,7 +80,7 @@ export function GradeCenter({ activeTerm, onClose, embedded = false, onDataChang
   const tokenTone =
     !token || token.source === "none" || token.lastError || (token.daysLeft !== null && token.daysLeft <= 3) ? "bad"
     : token.source === "env" || (token.daysLeft !== null && token.daysLeft < 10) ? "warn" : "good"
-  const toneClass = { good: "text-emerald-400 border-emerald-400/40", warn: "text-amber-400 border-amber-400/40", bad: "text-[hsl(var(--destructive))] border-[hsl(var(--destructive)/0.5)]" }[tokenTone]
+  const toneClass = { good: "bg-card border-transparent", warn: "bg-amber-400/20 border-transparent text-amber-700 dark:text-amber-300", bad: "bg-[hsl(var(--destructive)/0.12)] text-[hsl(var(--destructive))] border-transparent" }[tokenTone]
   const tokenLabel = !token ? "Canvas token" : token.source === "none" ? "No Canvas token"
     : token.daysLeft !== null ? (token.daysLeft <= 0 ? "Token expired" : `Token · ${token.daysLeft}d`) : "Token · not managed"
 
@@ -254,8 +255,6 @@ export function GradeCenter({ activeTerm, onClose, embedded = false, onDataChang
     setEditingWeights(null)
     return null
   }
-  const ringPct = termAvg !== null ? Math.min(100, (termAvg / 110) * 100) : 0
-  const R = 44, C = 2 * Math.PI * R
 
   return (
     <div className={embedded ? "" : "fixed inset-0 z-50 overflow-y-auto bg-[hsl(var(--background)/0.97)] backdrop-blur-sm"}
@@ -265,10 +264,10 @@ export function GradeCenter({ activeTerm, onClose, embedded = false, onDataChang
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-[hsl(var(--primary)/0.12)]">
-              <PieChart className="h-4 w-4 text-[hsl(var(--primary))]" />
+            <div className="h-10 w-10 rounded-2xl flex items-center justify-center bg-[hsl(var(--lime))]">
+              <PieChart className="h-4 w-4 text-[hsl(var(--lime-foreground))]" />
             </div>
-            <h2 className={`text-base font-semibold ${fg}`}>Grade center</h2>
+            <h2 className="font-display text-[26px] font-semibold">Grade center</h2>
             {/* Term switcher (hidden when embedded: the app header already has one) */}
             {!embedded && <div role="tablist" aria-label="Term" className="flex items-center gap-0.5 p-0.5 rounded-full bg-[hsl(var(--muted))]">
               {GRADED_TERMS.map(t => (
@@ -287,11 +286,11 @@ export function GradeCenter({ activeTerm, onClose, embedded = false, onDataChang
               {sync.state === "syncing" ? "Syncing with Canvas…" : sync.msg ?? "Canvas not synced yet"}
             </span>
             <button onClick={() => setShowToken(p => !p)} title="Canvas access token"
-              className={`flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-[hsl(var(--muted))] ${toneClass}`}>
+              className={`flex items-center gap-1.5 text-[11px] font-medium px-3 py-2 rounded-xl border transition-colors ${toneClass}`}>
               <KeyRound className="h-3.5 w-3.5" /> {tokenLabel}
             </button>
             <button onClick={runSync} disabled={sync.state === "syncing"}
-              className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))] transition-colors disabled:opacity-60">
+              className="flex items-center gap-1.5 text-[11px] font-semibold px-3 py-2 rounded-xl bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] transition-opacity hover:opacity-90 disabled:opacity-60">
               <RefreshCw className={`h-3.5 w-3.5 ${sync.state === "syncing" ? "animate-spin" : ""}`} /> Sync
             </button>
             {!embedded && (
@@ -306,10 +305,10 @@ export function GradeCenter({ activeTerm, onClose, embedded = false, onDataChang
 
         {/* Canvas token panel */}
         {(showToken || tokenTone === "bad") && (
-          <div className="rounded-2xl bg-card border border-border p-4 flex flex-col gap-3">
+          <div className="rounded-3xl bg-card p-5 flex flex-col gap-3">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <p className={`text-sm font-medium ${fg}`}>{alertsOk ? "Canvas connection and alerts" : "Canvas connection"}</p>
+                <p className="font-display font-semibold">{alertsOk ? "Canvas connection and alerts" : "Canvas connection"}</p>
                 <p className={`text-[11px] ${muted}`}>
                   {!token ? "Checking…"
                     : token.source === "database"
@@ -323,25 +322,25 @@ export function GradeCenter({ activeTerm, onClose, embedded = false, onDataChang
               <div className="flex gap-2">
               {alertsOk && <>
               <button onClick={() => tokenAction({ action: "test-alert" }, "Test alert sent. Check your email and phone.")} disabled={tokenBusy}
-                className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))] disabled:opacity-50">
+                className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-xl bg-[hsl(var(--muted))] hover:brightness-95 disabled:opacity-50">
                 Send test alert
               </button>
               <button onClick={() => tokenAction({ action: "test-digest" }, "Weekly summary sent. Check your email and phone.")} disabled={tokenBusy}
-                className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))] disabled:opacity-50">
+                className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-xl bg-[hsl(var(--muted))] hover:brightness-95 disabled:opacity-50">
                 Send weekly summary now
               </button>
               </>}
               <button onClick={() => tokenAction({ action: "renew" }, "Renewed. Automatic renewal is on.")} disabled={tokenBusy || token?.source === "none"}
-                className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))] disabled:opacity-50">
+                className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-xl bg-[hsl(var(--muted))] hover:brightness-95 disabled:opacity-50">
                 <RefreshCw className={`h-3.5 w-3.5 ${tokenBusy ? "animate-spin" : ""}`} /> Renew now
               </button>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <input type="password" value={tokenInput} onChange={e => setTokenInput(e.target.value)} placeholder="Paste a new Canvas token" autoComplete="off"
-                className="flex-1 min-w-[200px] text-xs rounded-md px-2.5 py-1.5 bg-[hsl(var(--muted))] border border-border outline-none focus:border-[hsl(var(--primary))]" />
+                className="flex-1 min-w-[200px] text-xs rounded-xl px-3 py-2 bg-[hsl(var(--muted))] outline-none focus:ring-2 focus:ring-[hsl(var(--foreground))]" />
               <button onClick={() => tokenAction({ token: tokenInput }, "Token saved.")} disabled={tokenBusy || tokenInput.trim().length < 20}
-                className="text-[11px] font-medium px-3 py-1.5 rounded-lg bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] disabled:opacity-50">
+                className="text-[11px] font-medium px-3 py-1.5 rounded-xl bg-[hsl(var(--primary))] font-display text-[hsl(var(--primary-foreground))] disabled:opacity-50">
                 Save token
               </button>
             </div>
@@ -352,35 +351,24 @@ export function GradeCenter({ activeTerm, onClose, embedded = false, onDataChang
         )}
 
         {/* Top: ring + term history + target */}
-        <div className="grid gap-3 sm:grid-cols-[170px_minmax(0,1fr)]">
-          <div className="rounded-2xl bg-card border border-border p-4 flex flex-col items-center justify-center">
-            <svg width="112" height="112" viewBox="0 0 112 112">
-              <circle cx="56" cy="56" r={R} fill="none" stroke="hsl(var(--muted))" strokeWidth="9" />
-              <circle cx="56" cy="56" r={R} fill="none" strokeWidth="9" strokeLinecap="round"
-                stroke={termAvg !== null ? getGrade(termAvg).color : "transparent"}
-                strokeDasharray={C} strokeDashoffset={C * (1 - ringPct / 100)}
-                transform="rotate(-90 56 56)" style={{ transition: "stroke-dashoffset 0.6s ease" }} />
-              <text x="56" y="56" textAnchor="middle" className="fill-[hsl(var(--foreground))]" style={{ fontSize: 24, fontWeight: 600 }}>
-                {termAvg !== null ? termAvg.toFixed(1) : "—"}
-              </text>
-              <text x="56" y="74" textAnchor="middle" className="fill-[hsl(var(--muted-foreground))]" style={{ fontSize: 11 }}>
-                {termAvg !== null ? `${getGrade(termAvg).letter} · average` : "no grades yet"}
-              </text>
-            </svg>
-            <span className={`text-[11px] mt-1 ${muted}`}>{loaded ? `${current.graded} of ${current.total} grades in` : "Loading…"}</span>
+        <div className="grid gap-3.5 sm:grid-cols-[220px_minmax(0,1fr)]">
+          <div className="rounded-3xl bg-[hsl(var(--lime))] text-[hsl(var(--lime-foreground))] p-5 flex flex-col justify-between gap-3 min-h-[170px]">
+            <span className="font-display text-[13px] font-semibold">{term} average</span>
+            <div className="font-display font-bold tabular text-[60px] leading-[0.9] tracking-[-0.05em]">{termAvg !== null ? termAvg.toFixed(1) : "—"}</div>
+            <span className="text-[12px] font-medium">{termAvg !== null ? `${getGrade(termAvg).letter} · ` : ""}{loaded ? `${current.graded} of ${current.total} grades in` : "Loading…"}</span>
           </div>
 
-          <div className="grid gap-3 grid-cols-3">
+          <div className="grid gap-3.5 grid-cols-3">
             {GRADED_TERMS.map(t => {
               const s = termSummary(t)
               const isCurrent = t === term
               const complete = s.total > 0 && s.graded === s.total
               return (
                 <button key={t} onClick={() => switchTerm(t)} title={`Show ${t}`}
-                  className={`text-left rounded-xl bg-card p-3 border transition-colors hover:border-[hsl(var(--primary)/0.4)] ${isCurrent ? "border-[hsl(var(--primary)/0.6)]" : "border-border"}`}>
-                  <p className={`text-[11px] ${muted}`}>{t}</p>
-                  <p className={`text-2xl font-semibold ${fg}`}>{s.average !== null ? s.average.toFixed(1) : "—"}</p>
-                  <p className={`text-[11px] ${complete ? "text-emerald-400" : isCurrent ? "text-[hsl(var(--primary))]" : muted}`}>
+                  className={`text-left rounded-3xl bg-card p-4 sm:p-5 transition-all hover:-translate-y-0.5 ${isCurrent ? "ring-2 ring-[hsl(var(--foreground))]" : ""}`}>
+                  <p className={`font-display text-[12px] font-semibold ${muted}`}>{t}</p>
+                  <p className="font-display font-bold tabular text-[32px] tracking-[-0.03em] leading-tight">{s.average !== null ? s.average.toFixed(1) : "—"}</p>
+                  <p className={`text-[11px] font-medium ${complete || isCurrent ? "" : muted}`}>
                     {complete ? "Completed" : t === defaultTerm ? "In progress" : `${s.graded}/${s.total} grades`}
                     {s.rawAverage !== null && s.average !== null && s.average - s.rawAverage > 0.05 && <span className={muted}> · {s.rawAverage.toFixed(1)} without bonus</span>}
                   </p>
@@ -388,13 +376,13 @@ export function GradeCenter({ activeTerm, onClose, embedded = false, onDataChang
               )
             })}
 
-            <div className="col-span-3 rounded-xl bg-card border border-border px-3 py-2.5 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <div className="col-span-3 rounded-3xl bg-card px-5 py-3.5 flex flex-wrap items-center gap-x-4 gap-y-2">
               <div className={`flex items-center gap-2 text-xs ${muted}`}>
-                <Target className="h-4 w-4 text-amber-400 shrink-0" />
+                <Target className="h-4 w-4 shrink-0" />
                 <span>Target</span>
                 <input type="number" min={0} max={100} value={target}
                   onChange={e => setTarget(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
-                  className="w-14 text-center text-sm font-semibold rounded-md px-1 py-0.5 bg-[hsl(var(--muted))] border border-border text-amber-400 outline-none" />
+                  className="w-16 text-center font-display font-bold tabular rounded-xl px-1 py-1 bg-[hsl(var(--lime))] text-[hsl(var(--lime-foreground))] outline-none focus:ring-2 focus:ring-[hsl(var(--foreground))]" />
                 <span>
                   {needed === null ? "— all work graded"
                     : needed <= 0 ? "— already secured"
@@ -411,9 +399,9 @@ export function GradeCenter({ activeTerm, onClose, embedded = false, onDataChang
 
         {/* Review: Canvas differs from what you entered */}
         {conflicts.length > 0 && (
-          <div className="rounded-2xl bg-card border border-amber-400/40 p-4 flex flex-col gap-3">
+          <div className="rounded-3xl bg-card ring-2 ring-[hsl(var(--lime))] p-5 flex flex-col gap-3">
             <div>
-              <p className={`text-sm font-medium ${fg}`}>Canvas has different grades for {conflicts.length} assessment{conflicts.length > 1 ? "s" : ""}</p>
+              <p className="font-display font-semibold">Canvas has different grades for {conflicts.length} assessment{conflicts.length > 1 ? "s" : ""}</p>
               <p className={`text-[11px] ${muted}`}>Nothing has been changed. Tick the ones to replace with the Canvas value.</p>
             </div>
             <div className="flex flex-col divide-y divide-border">
@@ -432,9 +420,9 @@ export function GradeCenter({ activeTerm, onClose, embedded = false, onDataChang
               })}
             </div>
             <div className="flex justify-end gap-2">
-              <button onClick={() => setConflicts([])} className={`text-[11px] px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))] ${muted}`}>Keep mine</button>
+              <button onClick={() => setConflicts([])} className={`text-[11px] px-3 py-1.5 rounded-xl bg-[hsl(var(--muted))] hover:brightness-95 ${muted}`}>Keep mine</button>
               <button onClick={applyConflicts} disabled={applying || accepted.size === 0}
-                className="text-[11px] font-medium px-3 py-1.5 rounded-lg bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] disabled:opacity-50">
+                className="text-[11px] font-medium px-3 py-1.5 rounded-xl bg-[hsl(var(--primary))] font-display text-[hsl(var(--primary-foreground))] disabled:opacity-50">
                 {applying ? "Applying…" : `Use Canvas for ${accepted.size}`}
               </button>
             </div>
@@ -442,7 +430,7 @@ export function GradeCenter({ activeTerm, onClose, embedded = false, onDataChang
         )}
 
         {/* Course cards */}
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
           {courses.map(course => {
             const weights = GRADE_WEIGHTS[term]?.[course.code]
             if (!weights) return null
@@ -453,53 +441,53 @@ export function GradeCenter({ activeTerm, onClose, embedded = false, onDataChang
             const isOpen = expanded === course.code
             const canvasScore = canvas[course.code]
             return (
-              <div key={course.code} className="rounded-2xl bg-card border border-border p-4 transition-colors hover:border-[hsl(var(--primary)/0.4)]">
+              <div key={course.code} className="rounded-3xl p-5 transition-transform hover:-translate-y-0.5" style={{ background: tint(course.color, 20) }}>
                 <button className="w-full text-left" onClick={() => setExpanded(isOpen ? null : course.code)}>
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="text-[10px] font-mono font-semibold" style={{ color: course.color }}>{course.code}</p>
-                      <p className={`text-sm font-medium truncate ${fg}`}>{course.name}</p>
+                      <p className="font-display text-xs font-semibold">{course.code}</p>
+                      <p className="font-display font-semibold text-[15px] leading-tight mt-0.5">{course.name}</p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-2xl font-semibold leading-none" style={{ color: avg !== null ? getGrade(avg).color : undefined }}>
-                        {avg !== null ? avg.toFixed(1) : <span className={muted}>—</span>}
+                      <p className="font-display font-bold tabular text-[30px] leading-none tracking-[-0.03em]">
+                        {avg !== null ? avg.toFixed(1) : <span className="text-xs font-medium opacity-60">no grade yet</span>}
                       </p>
-                      <p className={`text-[10px] mt-1 ${muted}`}>{avg !== null ? getGrade(avg).letter : "no grades"}</p>
+                      {avg !== null && <p className="text-[11px] mt-1 font-medium">{getGrade(avg).letter}</p>}
                     </div>
                   </div>
 
                   {/* earned / lost / pending bar (out of 100 course points) */}
-                  <div className="flex h-1.5 rounded-full overflow-hidden bg-[hsl(var(--muted))] mt-3 mb-2.5">
-                    <div style={{ width: `${st.earned}%`, backgroundColor: course.color, transition: "width 0.5s" }} />
-                    <div style={{ width: `${st.lost}%`, backgroundColor: course.color, opacity: 0.3, transition: "width 0.5s" }} />
+                  <div className="flex h-2 rounded-full overflow-hidden bg-[hsl(var(--card)/0.7)] mt-4 mb-3">
+                    <div style={{ width: `${st.earned}%`, backgroundColor: "hsl(var(--foreground))", transition: "width 0.5s" }} />
+                    <div style={{ width: `${st.lost}%`, backgroundColor: "hsl(var(--foreground))", opacity: 0.25, transition: "width 0.5s" }} />
                   </div>
 
                   <div className="flex items-center gap-1 flex-wrap">
                     {weights.map((w, i) => (
                       <span key={i} title={`Assessment ${i + 1} · ${w}%`}
-                        className={`text-[10px] px-1.5 py-0.5 rounded-md ${scores[i] !== null ? "font-medium" : `border border-dashed border-border ${muted}`}`}
-                        style={scores[i] !== null ? { backgroundColor: course.color + "22", color: course.color } : undefined}>
+                        className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${scores[i] !== null ? "" : "opacity-60"}`}
+                        style={{ backgroundColor: "hsl(var(--card) / 0.75)" }}>
                         A{i + 1} {scores[i] !== null ? scores[i] : "·"}
                       </span>
                     ))}
                     {(b.attended > 0 || b.liveOfficial) && (
                       <span title={b.liveOfficial ? "Live-session bonus (official, from Canvas)" : `${b.attended} of 13 live sessions attended — 7 needed`}
-                        className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md ${b.live ? "bg-emerald-400/15 text-emerald-400" : `bg-[hsl(var(--muted))] ${muted}`}`}>
+                        className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full ${b.live ? "bg-[hsl(var(--foreground))] text-[hsl(var(--background))]" : `bg-[hsl(var(--muted))] ${muted}`}`}>
                         <Radio className="h-3 w-3" />{b.liveOfficial ? (b.live ? "+5" : "0") : b.live ? "+5" : `${b.attended}/7`}
                       </span>
                     )}
                     {(b.totalPractices > 0 || b.pracOfficial) && (
                       <span title={b.pracOfficial ? "Practices bonus (official, from Canvas)" : `${b.done} of ${b.totalPractices} practices done`}
-                        className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md ${b.prac ? "bg-emerald-400/15 text-emerald-400" : `bg-[hsl(var(--muted))] ${muted}`}`}>
+                        className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full ${b.prac ? "bg-[hsl(var(--foreground))] text-[hsl(var(--background))]" : `bg-[hsl(var(--muted))] ${muted}`}`}>
                         <CheckSquare className="h-3 w-3" />{b.pracOfficial ? (b.prac ? "+5" : "0") : b.prac ? "+5" : `${b.done}/${b.totalPractices}`}
                       </span>
                     )}
                     {weightSource[course.code] === "estimated" && (
                       <span title="Weights couldn't be read from Canvas — open the course to check them"
-                        className="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-400/15 text-amber-500">check weights</span>
+                        className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400/15 text-amber-500">check weights</span>
                     )}
                     {canvasScore != null && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]">Canvas {canvasScore}%</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]">Canvas {canvasScore}%</span>
                     )}
                     <ChevronDown className={`h-3.5 w-3.5 ml-auto ${muted} transition-transform ${isOpen ? "rotate-180" : ""}`} />
                   </div>
@@ -526,7 +514,7 @@ export function GradeCenter({ activeTerm, onClose, embedded = false, onDataChang
                             }}
                             onBlur={() => persist(course.code, i, scores[i] ?? null)}
                             onKeyDown={e => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-                            className="w-16 text-center text-sm font-semibold rounded-md px-1 py-1 bg-[hsl(var(--muted))] border border-border outline-none focus:border-[hsl(var(--primary))]"
+                            className="w-16 text-center font-display font-semibold tabular rounded-xl px-1 py-1.5 bg-[hsl(var(--card))] outline-none focus:ring-2 focus:ring-[hsl(var(--foreground))] focus:border-[hsl(var(--primary))]"
                             style={{ color: scores[i] !== null ? course.color : undefined }} />
                         </span>
                       </label>
@@ -539,9 +527,9 @@ export function GradeCenter({ activeTerm, onClose, embedded = false, onDataChang
         </div>
 
         <div className={`flex flex-wrap gap-4 text-[11px] ${muted}`}>
-          <span className="flex items-center gap-1.5"><span className="h-1.5 w-3 rounded-full bg-[hsl(var(--primary))]" /> Points earned</span>
-          <span className="flex items-center gap-1.5"><span className="h-1.5 w-3 rounded-full bg-[hsl(var(--primary)/0.3)]" /> Points lost</span>
-          <span className="flex items-center gap-1.5"><span className="h-1.5 w-3 rounded-full bg-[hsl(var(--muted))]" /> Still to come</span>
+          <span className="flex items-center gap-1.5"><span className="h-2 w-3 rounded-full bg-[hsl(var(--foreground))]" /> Points earned</span>
+          <span className="flex items-center gap-1.5"><span className="h-2 w-3 rounded-full bg-[hsl(var(--foreground)/0.25)]" /> Points lost</span>
+          <span className="flex items-center gap-1.5"><span className="h-2 w-3 rounded-full bg-[hsl(var(--card))]" /> Still to come</span>
           <span className="ml-auto">Tap a course to edit its scores · saved automatically</span>
         </div>
       </div>
@@ -582,23 +570,23 @@ function WeightsEditor({ weights, color, canReset, onSave, onCancel }: {
   const valid = nums.length > 0 && nums.every(n => !isNaN(n) && n >= 0 && n <= 100) && Math.abs(total - 100) <= 1
   const go = async (value: number[] | null) => { setBusy(true); setErr(await onSave(value)); setBusy(false) }
   return (
-    <div className="rounded-xl border border-border bg-[hsl(var(--muted)/0.4)] p-3 flex flex-col gap-2">
+    <div className="rounded-2xl bg-[hsl(var(--card)/0.85)] p-3 flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
         {w.map((v, i) => (
           <label key={i} className="flex items-center gap-1 text-[11px]">
             A{i + 1}
             <input type="number" min={0} max={100} value={v} onChange={e => setW(w.map((x, j) => (j === i ? e.target.value : x)))}
-              className="w-14 text-center rounded-md px-1 py-1 bg-background border border-border outline-none focus:border-[hsl(var(--primary))]" style={{ color }} />%
+              className="w-14 text-center rounded-lg px-1 py-1 bg-[hsl(var(--muted))] outline-none focus:ring-2 focus:ring-[hsl(var(--foreground))]" style={{ color }} />%
           </label>
         ))}
-        <button onClick={() => setW([...w, "0"])} disabled={w.length >= 12} className={`text-[11px] px-2 py-1 rounded-md border border-dashed border-border ${muted}`}>+ assessment</button>
-        {w.length > 1 && <button onClick={() => setW(w.slice(0, -1))} className={`text-[11px] px-2 py-1 rounded-md border border-dashed border-border ${muted}`}>− last</button>}
+        <button onClick={() => setW([...w, "0"])} disabled={w.length >= 12} className={`text-[11px] px-2 py-1 rounded-lg bg-[hsl(var(--muted))] ${muted}`}>+ assessment</button>
+        {w.length > 1 && <button onClick={() => setW(w.slice(0, -1))} className={`text-[11px] px-2 py-1 rounded-lg bg-[hsl(var(--muted))] ${muted}`}>− last</button>}
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <span className={`text-[11px] ${valid ? "text-emerald-400" : "text-amber-500"}`}>Total {total}%{valid ? "" : " — must be 100"}</span>
         <span className="ml-auto flex gap-2">
-          {canReset && <button onClick={() => go(null)} disabled={busy} className={`text-[11px] px-2.5 py-1 rounded-md border border-border ${muted}`}>Back to automatic</button>}
-          <button onClick={onCancel} className={`text-[11px] px-2.5 py-1 rounded-md border border-border ${muted}`}>Cancel</button>
+          {canReset && <button onClick={() => go(null)} disabled={busy} className={`text-[11px] px-2.5 py-1 rounded-lg bg-[hsl(var(--muted))] ${muted}`}>Back to automatic</button>}
+          <button onClick={onCancel} className={`text-[11px] px-2.5 py-1 rounded-lg bg-[hsl(var(--muted))] ${muted}`}>Cancel</button>
           <button onClick={() => go(nums)} disabled={!valid || busy} className="text-[11px] font-medium px-2.5 py-1 rounded-md bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] disabled:opacity-50">Save</button>
         </span>
       </div>
