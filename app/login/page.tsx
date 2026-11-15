@@ -168,7 +168,8 @@ export default function LoginPage() {
         </main>
 
         <footer className="px-6 pb-6 text-center text-[11px] text-slate-500 font-mono">
-          built by Juan M. Aguilar · Next.js · Neon Postgres · Vercel
+          built by Juan M. Aguilar · Next.js · Neon Postgres · Vercel ·{" "}
+          <a href="/privacy" className="underline hover:text-slate-300">privacy</a>
         </footer>
       </div>
     </div>
