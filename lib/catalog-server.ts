@@ -83,11 +83,29 @@ export async function getDiscoveryReport(email: string) {
 }
 
 // ── Canvas helpers ──────────────────────────────────────────────────────
+// Canvas rate-limits bursts (HTTP 429): retry with a growing pause
+async function canvasFetch(url: string, token: string): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" })
+    if (res.status !== 429 || attempt >= 4) return res
+    const wait = Number(res.headers.get("retry-after")) * 1000 || 800 * 2 ** attempt
+    await new Promise(r => setTimeout(r, Math.min(wait, 8000)))
+  }
+}
+
+// Runs fn over items with at most `limit` running at the same time
+async function pool<T>(items: T[], limit: number, fn: (item: T) => Promise<void>) {
+  let i = 0
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (i < items.length) await fn(items[i++])
+  }))
+}
+
 async function canvasAll(path: string, token: string): Promise<any[]> {
   const out: any[] = []
   let url: string | null = `https://${process.env.CANVAS_DOMAIN}/api/v1${path}${path.includes("?") ? "&" : "?"}per_page=100`
   for (let page = 0; url && page < 10; page++) {
-    const res: Response = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" })
+    const res: Response = await canvasFetch(url, token)
     if (!res.ok) throw new Error(`Canvas ${res.status} ${path}`)
     const data = await res.json()
     if (!Array.isArray(data)) return [data]
@@ -97,7 +115,7 @@ async function canvasAll(path: string, token: string): Promise<any[]> {
   return out
 }
 async function canvasOne(path: string, token: string): Promise<any> {
-  const res = await fetch(`https://${process.env.CANVAS_DOMAIN}/api/v1${path}`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" })
+  const res = await canvasFetch(`https://${process.env.CANVAS_DOMAIN}/api/v1${path}`, token)
   if (!res.ok) throw new Error(`Canvas ${res.status} ${path}`)
   return res.json()
 }
@@ -227,7 +245,7 @@ export async function discoverCatalog(email: string): Promise<{ catalog: Catalog
   const terms: Record<string, CatalogTerm & { _starts: string[]; _active: boolean }> = {}
   let teaches = 0, studies = 0
 
-  await Promise.all(courses.map(async (c: any) => {
+  await pool(courses, 4, async (c: any) => {
     const code = courseCodeOf(c) ?? `C-${c.id}`
     const label = termLabelOf(c, courseCodeOf(c))
     const types: string[] = (c.enrollments ?? []).map((e: any) => String(e.type ?? e.role ?? "").toLowerCase())
@@ -297,7 +315,7 @@ export async function discoverCatalog(email: string): Promise<{ catalog: Catalog
     } catch (err) {
       report.push({ term: label, code, name: c.name, role, assessments: 0, practices: 0, weights: [], weightSource: "estimated", liveSession: "", error: String(err) })
     }
-  }))
+  })
 
   // Order terms and courses; colours by position; week-1 Monday from the earliest start date
   const ordered = Object.entries(terms).sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
