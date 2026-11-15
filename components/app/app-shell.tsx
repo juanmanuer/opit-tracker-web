@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { Sun, BookOpen, PieChart, CalendarRange, Search, Moon, LogOut, X } from "lucide-react"
 import { useTheme } from "next-themes"
-import { useSession, signOut } from "next-auth/react"
+import { useSession } from "next-auth/react"
 import type { Term } from "@/lib/store"
 import { gradedTerms, termNames } from "@/lib/catalog"
 import { useCatalog } from "@/components/app/catalog-gate"
@@ -16,25 +16,33 @@ import { InstallButton } from "@/components/app/install-button"
 import { GradeCenter } from "@/components/dashboard/grade-center"
 import { PlanView } from "@/components/app/plan-view"
 import { ExportButton } from "@/components/dashboard/export-button"
+import { TeacherView } from "@/components/app/teacher-view"
+import { Onboarding } from "@/components/app/onboarding"
+import { AccountDialog } from "@/components/app/account-dialog"
 
 export type View = "today" | "courses" | "grades" | "plan"
 
-const NAV: { key: View; label: string; icon: typeof Sun }[] = [
+const STUDENT_NAV: { key: View; label: string; icon: typeof Sun }[] = [
   { key: "today", label: "Today", icon: Sun },
   { key: "courses", label: "Courses", icon: BookOpen },
   { key: "grades", label: "Grades", icon: PieChart },
   { key: "plan", label: "Plan", icon: CalendarRange },
 ]
+// Professors and staff: no grades/attendance — their courses and the calendar
+const TEACHER_NAV = STUDENT_NAV.filter(n => n.key === "courses" || n.key === "plan")
 
 const muted = "text-[hsl(var(--muted-foreground))]"
 
 export function AppShell() {
+  const { catalog, role } = useCatalog()
+  const isStudent = role === "student"
+  const NAV = isStudent ? STUDENT_NAV : TEACHER_NAV
   const [term, setTerm] = useActiveTerm()
-  const [view, setView] = useState<View>("today")
+  const [view, setView] = useState<View>(isStudent ? "today" : "courses")
+  const [accountOpen, setAccountOpen] = useState(false)
   const [course, setCourse] = useState<string | null>(null)
   const [paletteOpen, setPaletteOpen] = useState(false)
   const academic = useAcademic()
-  const { catalog } = useCatalog()          // re-render when the catalogue changes (e.g. weights edited)
   const terms = gradedTerms(catalog).length ? gradedTerms(catalog) : termNames(catalog)
   const { theme, setTheme } = useTheme()
   const { data: session } = useSession()
@@ -65,7 +73,7 @@ export function AppShell() {
       const k = e.key.toLowerCase()
       if (pendingG && Date.now() - pendingG < 1200) {
         const map: Record<string, View> = { t: "today", c: "courses", g: "grades", p: "plan" }
-        if (map[k]) { e.preventDefault(); navigate(map[k]) }
+        if (map[k] && NAV.some(n => n.key === map[k])) { e.preventDefault(); navigate(map[k]) }
         pendingG = 0
       } else if (k === "g") pendingG = Date.now()
     }
@@ -93,7 +101,7 @@ export function AppShell() {
           <button onClick={() => setTheme(isDark ? "light" : "dark")} title="Toggle theme" className={`h-9 w-9 rounded-xl flex items-center justify-center hover:bg-[hsl(var(--muted))] ${muted}`}>
             {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
-          <button onClick={() => signOut({ callbackUrl: "/login" })} title={`Sign out ${session?.user?.email ?? ""}`}
+          <button onClick={() => setAccountOpen(true)} title={`Account · ${session?.user?.email ?? ""}`}
             className="h-9 w-9 rounded-full overflow-hidden flex items-center justify-center bg-[hsl(var(--muted))] text-xs font-semibold">
             {session?.user?.image ? <img src={session.user.image} alt="" className="h-full w-full object-cover" /> : session?.user?.name?.charAt(0) ?? <LogOut className="h-4 w-4" />}
           </button>
@@ -118,9 +126,12 @@ export function AppShell() {
               <kbd className="hidden sm:inline font-mono text-[10px] px-1.5 py-0.5 rounded bg-[hsl(var(--muted))]">Ctrl K</kbd>
             </button>
             <span className="md:hidden"><InstallButton /></span>
-            <ExportButton activeTerm={term} />
+            {isStudent && <ExportButton activeTerm={term} />}
             <button onClick={() => setTheme(isDark ? "light" : "dark")} aria-label="Toggle theme" className={`md:hidden h-8 w-8 rounded-lg flex items-center justify-center ${muted}`}>
               {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </button>
+            <button onClick={() => setAccountOpen(true)} aria-label="Account" className="md:hidden h-8 w-8 rounded-full overflow-hidden flex items-center justify-center bg-[hsl(var(--muted))] text-xs font-semibold">
+              {session?.user?.image ? <img src={session.user.image} alt="" className="h-full w-full object-cover" /> : session?.user?.name?.charAt(0) ?? <LogOut className="h-4 w-4" />}
             </button>
           </div>
         </header>
@@ -139,6 +150,8 @@ export function AppShell() {
             <div className="grid gap-3 md:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-32 rounded-2xl bg-[hsl(var(--muted)/0.6)] animate-pulse" />)}
             </div>
+          ) : !isStudent && view === "courses" ? (
+            <TeacherView term={term} />
           ) : view === "today" ? (
             <TodayView term={term} academic={academic} onOpenCourse={openCourse} />
           ) : view === "courses" ? (
@@ -153,7 +166,7 @@ export function AppShell() {
 
       {/* Mobile bottom bar */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border bg-background/95 backdrop-blur pb-[env(safe-area-inset-bottom)]">
-        <div className="grid grid-cols-4">
+        <div className={`grid ${NAV.length === 4 ? "grid-cols-4" : "grid-cols-2"}`}>
           {NAV.map(n => {
             const active = view === n.key
             return (
@@ -166,6 +179,8 @@ export function AppShell() {
         </div>
       </nav>
 
+      <Onboarding />
+      <AccountDialog open={accountOpen} onOpenChange={setAccountOpen} />
       <CommandPalette open={paletteOpen} setOpen={setPaletteOpen} term={term} onNavigate={v => navigate(v)} onOpenCourse={openCourse} />
     </div>
   )

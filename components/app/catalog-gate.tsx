@@ -90,7 +90,7 @@ function ConnectCanvas({ connected, onDone }: { connected: boolean; onDone: () =
     const res = await fetch("/api/catalog", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "refresh" }) })
     const data = await res.json().catch(() => ({}))
     if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`)
-    if (!Object.keys(data.catalog?.terms ?? {}).length) throw new Error("Canvas connected, but no courses with assessments were found yet.")
+    if (!Object.keys(data.catalog?.terms ?? {}).length) throw new Error("Canvas is connected, but no courses were found. OPIT Tracker shows the courses you study or teach in Canvas — if you were just enrolled, try again later.")
   }
 
   const submit = async () => {
@@ -118,7 +118,7 @@ function ConnectCanvas({ connected, onDone }: { connected: boolean; onDone: () =
           <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-[hsl(var(--primary)/0.12)]"><KeyRound className="h-5 w-5 text-[hsl(var(--primary))]" /></div>
           <div>
             <p className="text-base font-semibold">Connect your Canvas</p>
-            <p className={`text-xs ${muted}`}>Your courses, assessments, weights and deadlines are read from it automatically.</p>
+            <p className={`text-xs ${muted}`}>Your courses, assessments, weights and deadlines are read from it automatically — the ones you study or teach.</p>
           </div>
         </div>
         <ol className={`text-xs ${muted} list-decimal pl-4 flex flex-col gap-1`}>

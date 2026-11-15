@@ -75,6 +75,8 @@ export interface Professor {
   recordingPassword: string
   officeHours: string
   tutors: string[]
+  infoUpdatedBy?: string | null   // shared course info (lib/course-info.ts)
+  infoUpdatedAt?: string | null
 }
 
 export interface QuickLink {

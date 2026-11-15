@@ -51,14 +51,14 @@ export function CommandPalette({ open, setOpen, term, onNavigate, onOpenCourse }
         </CommandGroup>
         <CommandSeparator />
         <CommandGroup heading="Actions">
-          {next && (
+          {next?.professor.meetingId && (
             <CommandItem value={`join next live session ${next.professor.courseName}`} onSelect={() => run(() => window.open(zoomUrl(next.professor.meetingId), "_blank"))}>
               <Radio className="mr-2 h-4 w-4" /> Join next live session · {next.professor.courseName}
             </CommandItem>
           )}
           {courses.map(c => {
             const p = professorOf(term, c.code)
-            return p ? (
+            return p?.meetingId ? (
               <CommandItem key={`zoom-${c.code}`} value={`zoom ${c.code} ${c.name}`} onSelect={() => run(() => window.open(zoomUrl(p.meetingId), "_blank"))}>
                 <Video className="mr-2 h-4 w-4" /> Zoom · {c.name}
               </CommandItem>

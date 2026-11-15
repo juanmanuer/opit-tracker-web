@@ -206,8 +206,14 @@ async function maybeAlert(email: string, error: string, daysLeft: number | null)
   await sql`UPDATE canvas_tokens SET last_alert = now() WHERE id = ${email.toLowerCase()}`
 }
 
-// Removes a user's connection (used by "delete my data")
+// Removes a user's connection (used by "delete my data"): revokes the token in
+// Canvas when we know its id, then forgets it here
 export async function deleteToken(email: string) {
   await ensureTable()
+  const row = await readRow(email).catch(() => null)
+  if (row?.canvas_id) {
+    const token = await getCanvasToken(email)
+    if (token) await canvas(`/users/self/tokens/${row.canvas_id}`, token, { method: "DELETE" }).catch(() => {})
+  }
   await sql`DELETE FROM canvas_tokens WHERE id = ${email.toLowerCase()}`
 }

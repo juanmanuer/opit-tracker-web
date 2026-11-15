@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Plus, Rss, ExternalLink, Video, Trash2, X, C
 import { coursesOf, courseResult, daysUntil, zoomUrl, professorOf, TERM_WEEKS } from "@/lib/academic"
 import { buildPlan, termMonday, addDays, type PlanItem, type CanvasDates, type PersonalEvent } from "@/lib/plan"
 import type { Academic } from "@/hooks/use-academic"
+import { useCatalog } from "@/components/app/catalog-gate"
 
 const muted = "text-[hsl(var(--muted-foreground))]"
 const fg = "text-[hsl(var(--foreground))]"
@@ -88,6 +89,7 @@ function Runway({ term, items, academic, color, now, selected, onSelect }: {
   term: string; items: PlanItem[]; academic: Academic; color: (c: string | null) => string; now: Date
   selected: PlanItem | null; onSelect: (i: PlanItem) => void
 }) {
+  const isStudent = useCatalog().role === "student"
   const { state } = academic
   const termStart = termMonday(term)
   const lastDeadline = Math.max(...items.filter(i => i.kind === "deadline").map(i => i.start.getTime()), addDays(termStart, TERM_WEEKS * 7).getTime())
@@ -179,9 +181,9 @@ function Runway({ term, items, academic, color, now, selected, onSelect }: {
                       <span className="h-2 w-2 rounded-full" style={{ backgroundColor: c.color }} />{c.code}
                     </p>
                     <p className={`text-xs truncate ${fg}`}>{c.name}</p>
-                    <p className={`text-[10px] ${muted}`}>
+                    {isStudent && <p className={`text-[10px] ${muted}`}>
                       {r.total !== null ? <span className="font-semibold" style={{ color: c.color }}>{r.total.toFixed(1)}</span> : "—"} · live {r.bonus.attended}/13{r.bonus.live ? " ✓" : ""}
-                    </p>
+                    </p>}
                   </div>
                   <div className="relative flex-1">
                     {/* Sessions */}
@@ -427,7 +429,7 @@ function Agenda({ term, items, academic, color, now, onSelect }: {
                         {i.kind === "office" && " · office hours"}
                       </p>
                     </button>
-                    {i.kind === "session" && prof && (
+                    {i.kind === "session" && prof?.meetingId && (
                       <a href={zoomUrl(prof.meetingId)} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border border-border hover:bg-card shrink-0"><Video className="h-3 w-3" /> Zoom</a>
                     )}
                     {i.kind === "deadline" && (() => {
@@ -455,6 +457,7 @@ function Detail({ item, term, academic, color, now, onClose, onOpenCourse, onTog
   onClose: () => void; onOpenCourse: (c: string) => void; onToggleAttendance: (code: string, n: number) => void; onDeletePersonal: (id: number) => void
 }) {
   const { state } = academic
+  const isStudent = useCatalog().role === "student"
   const c = item.kind === "personal" ? "#0891B2" : color(item.courseCode)
   const r = item.courseCode ? courseResult(state, term, item.courseCode) : null
   const prof = item.courseCode ? professorOf(term, item.courseCode) : undefined
@@ -471,18 +474,18 @@ function Detail({ item, term, academic, color, now, onClose, onOpenCourse, onTog
         <p className={`text-sm font-semibold ${fg}`}>{item.kind === "deadline" ? `${item.title} · ${item.weight}` : item.title}</p>
         <p className={`text-xs ${muted}`}>
           {fmtDay(item.start)}{!item.allDay && ` · ${fmtTime(item.start)}${item.kind !== "deadline" ? `–${fmtTime(item.end)}` : ""}`}
-          {item.kind === "deadline" && (score != null ? ` · graded ${score}` : status === "done" ? " · submitted, awaiting grade" : days >= 0 ? ` · ${days} days left` : ` · ${-days} days late`)}
-          {item.kind === "deadline" && score == null && needed != null && needed > 0 && needed <= 100 && ` · aim for ≥ ${Math.ceil(needed)} to keep 90`}
+          {item.kind === "deadline" && isStudent && (score != null ? ` · graded ${score}` : status === "done" ? " · submitted, awaiting grade" : days >= 0 ? ` · ${days} days left` : ` · ${-days} days late`)}
+          {item.kind === "deadline" && isStudent && score == null && needed != null && needed > 0 && needed <= 100 && ` · aim for ≥ ${Math.ceil(needed)} to keep 90`}
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
-        {item.kind === "session" && (
+        {item.kind === "session" && isStudent && (
           <button onClick={() => onToggleAttendance(item.courseCode!, item.sessionNumber!)}
             className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border ${attended ? "border-emerald-400/50 text-emerald-400" : "border-border"}`}>
             <Check className="h-3.5 w-3.5" /> {attended ? `Session ${item.sessionNumber} attended` : `Mark session ${item.sessionNumber} attended`}
           </button>
         )}
-        {item.kind === "session" && prof && <a href={zoomUrl(prof.meetingId)} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))]"><Video className="h-3.5 w-3.5" /> Zoom</a>}
+        {item.kind === "session" && prof?.meetingId && <a href={zoomUrl(prof.meetingId)} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))]"><Video className="h-3.5 w-3.5" /> Zoom</a>}
         {item.url && <a href={item.url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))]"><ExternalLink className="h-3.5 w-3.5" /> Open in Canvas</a>}
         {item.courseCode && <button onClick={() => onOpenCourse(item.courseCode!)} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))]"><BookOpen className="h-3.5 w-3.5" /> Course</button>}
         {item.kind === "personal" && <button onClick={() => onDeletePersonal(item.personalId!)} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border hover:text-[hsl(var(--destructive))]"><Trash2 className="h-3.5 w-3.5" /> Delete</button>}

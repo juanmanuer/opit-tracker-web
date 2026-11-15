@@ -1,13 +1,15 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { CheckCircle2, Clock, CircleDashed, Video, Copy, Mail, User, Users, Trash2, Check, Radio, CheckSquare } from "lucide-react"
+import { CheckCircle2, Clock, CircleDashed, Trash2, Check, Radio, CheckSquare } from "lucide-react"
 import { getGrade } from "@/lib/grades"
 import {
-  coursesOf, assessmentsOf, practicesOf, professorOf, parseDeadline, daysUntil, courseResult, zoomUrl,
+  coursesOf, assessmentsOf, practicesOf, professorOf, parseDeadline, daysUntil, courseResult,
   LIVE_SESSIONS_PER_COURSE, LIVE_NEEDED,
 } from "@/lib/academic"
 import type { Academic } from "@/hooks/use-academic"
+import { CourseInfoCard } from "@/components/app/course-info-card"
+import { useCatalog } from "@/components/app/catalog-gate"
 
 const muted = "text-[hsl(var(--muted-foreground))]"
 const fg = "text-[hsl(var(--foreground))]"
@@ -21,9 +23,9 @@ export function CoursesView({ term, academic, course, onSelectCourse }: {
   term: string; academic: Academic; course: string | null; onSelectCourse: (code: string) => void
 }) {
   const { state, toggleAttendance, togglePractice, setAssessmentStatus } = academic
+  useCatalog() // re-render when shared course info changes
   const courses = coursesOf(term)
   const selected = courses.find(c => c.code === course) ?? courses[0]
-  const [copied, setCopied] = useState<string | null>(null)
   const now = new Date()
 
   if (!selected) return <p className={`text-sm ${muted}`}>No courses configured for {term}.</p>
@@ -32,7 +34,6 @@ export function CoursesView({ term, academic, course, onSelectCourse }: {
   const prof = professorOf(term, selected.code)
   const practices = practicesOf(selected.code)
   const attendance = state.attendance[selected.code] ?? {}
-  const copy = (text: string, key: string) => { navigator.clipboard.writeText(text); setCopied(key); setTimeout(() => setCopied(null), 1500) }
 
   return (
     <div className="flex flex-col gap-3">
@@ -66,7 +67,7 @@ export function CoursesView({ term, academic, course, onSelectCourse }: {
         <div>
           <p className="text-xs font-mono font-semibold" style={{ color: selected.color }}>{selected.code}</p>
           <h1 className={`text-xl font-semibold ${fg}`}>{selected.name}</h1>
-          {prof && <p className={`text-xs ${muted}`}>{prof.name} · {prof.liveSessions.replace(" (Malta)", "")}</p>}
+          {prof && (prof.name || prof.liveSessions) && <p className={`text-xs ${muted}`}>{[prof.name, prof.liveSessions?.replace(" (Malta)", "")].filter(Boolean).join(" · ")}</p>}
         </div>
         <div className="text-right">
           <p className="text-3xl font-semibold leading-none" style={{ color: r.total !== null ? getGrade(r.total).color : undefined }}>
@@ -169,20 +170,7 @@ export function CoursesView({ term, academic, course, onSelectCourse }: {
         </div>
       </div>
 
-      {/* Professor & links */}
-      {prof && (
-        <div className="rounded-2xl bg-[hsl(var(--muted)/0.5)] px-4 py-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
-          <span className={`flex items-center gap-1.5 ${fg}`}><User className="h-3.5 w-3.5" /> {prof.name}</span>
-          <span className={`flex items-center gap-1.5 ${muted}`}><Clock className="h-3.5 w-3.5" /> Office hours: {prof.officeHours.replace(/\(Malta\)/g, "")}</span>
-          {prof.tutors.length > 0 && <span className={`flex items-center gap-1.5 ${muted}`}><Users className="h-3.5 w-3.5" /> {prof.tutors.join(", ")}</span>}
-          <span className="flex flex-wrap gap-1.5 ml-auto">
-            <a href={zoomUrl(prof.meetingId)} target="_blank" rel="noreferrer" className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-border hover:bg-card"><Video className="h-3.5 w-3.5" /> Zoom</a>
-            <button onClick={() => copy(prof.passcode, "pass")} className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-border hover:bg-card"><Copy className="h-3.5 w-3.5" /> {copied === "pass" ? "Copied" : "Passcode"}</button>
-            <button onClick={() => copy(prof.recordingPassword, "rec")} className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-border hover:bg-card"><Copy className="h-3.5 w-3.5" /> {copied === "rec" ? "Copied" : "Recording pwd"}</button>
-            <a href={`mailto:${prof.email}`} className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-border hover:bg-card"><Mail className="h-3.5 w-3.5" /> Email</a>
-          </span>
-        </div>
-      )}
+      <CourseInfoCard term={term} code={selected.code} />
 
       <TermNotes term={term} />
     </div>

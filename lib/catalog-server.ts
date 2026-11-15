@@ -10,6 +10,7 @@ import {
   type Catalog, type CatalogTerm, type CatalogCourse, type CatalogAssessment, type WeightSource,
 } from "@/lib/catalog"
 import type { Practice, Professor } from "@/lib/store"
+import { applyCourseInfo, seedFromBuiltIn } from "@/lib/course-info"
 
 const PALETTE = ["#DC2626", "#2563EB", "#EA580C", "#7C3AED", "#16A34A", "#0891B2", "#DB2777", "#CA8A04", "#4F46E5", "#0F766E"]
 const STALE_AFTER_MS = 24 * 3_600_000
@@ -74,8 +75,10 @@ export async function getCatalog(email: string, opts: { refreshIfStale?: boolean
     stored = await readStored(email).catch(() => stored)
   }
   const discovered = stored ? { ...stored.data, discoveredAt: stored.discovered_at } : null
+  if (user?.legacy_catalog) await seedFromBuiltIn().catch(err => console.error("Seed course info:", err))
   const base = user?.legacy_catalog ? mergeBuiltIn(discovered) : discovered ?? EMPTY_CATALOG
-  return applyWeightOverrides(base, await readOverrides(email).catch(() => []))
+  const withInfo = await applyCourseInfo(base).catch(err => { console.error("Course info:", err); return base })
+  return applyWeightOverrides(withInfo, await readOverrides(email).catch(() => []))
 }
 
 export async function getDiscoveryReport(email: string) {
@@ -246,7 +249,7 @@ export async function discoverCatalog(email: string): Promise<{ catalog: Catalog
   let teaches = 0, studies = 0
 
   await pool(courses, 4, async (c: any) => {
-    const code = courseCodeOf(c) ?? `C-${c.id}`
+    let code = courseCodeOf(c) ?? `C-${c.id}`
     const label = termLabelOf(c, courseCodeOf(c))
     const types: string[] = (c.enrollments ?? []).map((e: any) => String(e.type ?? e.role ?? "").toLowerCase())
     const role = types.some(t => /teacher|ta|designer/.test(t)) ? "teacher" : "student"
@@ -277,10 +280,18 @@ export async function discoverCatalog(email: string): Promise<{ catalog: Catalog
       if (byIdx.size === 0 && practices.length === 0 && role === "student") return
       role === "teacher" ? teaches++ : studies++
 
+      // Same course code twice in one term (e.g. a professor teaching two intakes) → keep both apart
+      const t = (terms[label] ??= { start: null, courses: [], weights: {}, weightSource: {}, assessments: [], practices: [], professors: [], _starts: [], _active: false })
+      if (t.courses.some(x => x.code === code)) code = `${code}-${c.id}`
+      practices.forEach(p => { p.courseCode = code })
+      t.courses.push({ code, name: String(c.name ?? code), color: "", canvasId: c.id } as CatalogCourse)
+
       const count = byIdx.size ? Math.max(...byIdx.keys()) + 1 : 0
       const slots = Array.from({ length: count }, (_, idx) => ({ idx, a: byIdx.get(idx) ?? null }))
       const syllabus = stripHtml(detail.syllabus_body)
-      const { weights, source } = count ? inferWeights(slots, groups, !!detail.apply_assignment_group_weights, syllabus) : { weights: [], source: "estimated" as WeightSource }
+      // If the course details didn't load, still trust weighted groups (they must add up to 100)
+      const groupWeighted = detail.apply_assignment_group_weights ?? true
+      const { weights, source } = count ? inferWeights(slots, groups, !!groupWeighted, syllabus) : { weights: [], source: "estimated" as WeightSource }
       const name = cleanName(String(c.name ?? code), courseCodeOf(c))
 
       const assessments: CatalogAssessment[] = slots.map(({ idx, a }) => ({
@@ -302,11 +313,10 @@ export async function discoverCatalog(email: string): Promise<{ catalog: Catalog
         officeHours: live.office, tutors: teachers.slice(1).map((t: any) => t.name).filter(Boolean),
       } : null
 
-      const t = (terms[label] ??= { start: null, courses: [], weights: {}, weightSource: {}, assessments: [], practices: [], professors: [], _starts: [], _active: false })
       const start = c.start_at ?? c.term?.start_at
       if (start) t._starts.push(start)
       if (c._active) t._active = true
-      t.courses.push({ code, name, color: "", canvasId: c.id } as CatalogCourse)
+      t.courses.find(x => x.canvasId === c.id)!.name = name
       if (count) { t.weights[code] = weights; t.weightSource[code] = source }
       t.assessments.push(...assessments)
       t.practices.push(...practices)

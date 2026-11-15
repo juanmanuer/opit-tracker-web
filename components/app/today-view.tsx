@@ -81,10 +81,12 @@ export function TodayView({ term, academic, onOpenCourse }: { term: string; acad
                   </p>
                 )}
               </div>
-              <a href={zoomUrl(next.professor.meetingId)} target="_blank" rel="noreferrer"
-                className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:opacity-90">
-                <Video className="h-3.5 w-3.5" /> Join Zoom
-              </a>
+              {next.professor.meetingId && (
+                <a href={zoomUrl(next.professor.meetingId)} target="_blank" rel="noreferrer"
+                  className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:opacity-90">
+                  <Video className="h-3.5 w-3.5" /> Join Zoom
+                </a>
+              )}
             </div>
           </div>
         ) : (
