@@ -4,10 +4,11 @@ import { authOptions } from "@/lib/auth"
 import { sql } from "@/lib/db"
 import { gradeChangeEmailHtml } from "@/lib/email"
 import { CANVAS_COURSE_IDS } from "@/lib/grades"
+import { getCanvasToken } from "@/lib/canvas-token"
 import { TERM_COURSES, type Term } from "@/lib/store"
 
 const CANVAS_DOMAIN = process.env.CANVAS_DOMAIN
-const CANVAS_TOKEN = process.env.CANVAS_TOKEN
+let CANVAS_TOKEN: string | null = null // loaded per request (database first, then env)
 
 // Canvas course IDs live in lib/grades.ts (CANVAS_COURSE_IDS)
 function getTermCourses(term: string) {
@@ -63,6 +64,7 @@ export async function GET(req: Request) {
     if (courses.length === 0) {
       return NextResponse.json({ error: `No Canvas courses configured for ${term}` }, { status: 400 })
     }
+    CANVAS_TOKEN = await getCanvasToken()
     if (!CANVAS_DOMAIN || !CANVAS_TOKEN) {
       return NextResponse.json({ error: "Canvas is not configured (CANVAS_DOMAIN / CANVAS_TOKEN missing)" }, { status: 500 })
     }
@@ -108,6 +110,13 @@ export async function GET(req: Request) {
       oldScore: number | null
       newScore: number
     }[] = []
+
+    if (results.every(r => r.error?.includes("401"))) {
+      return NextResponse.json(
+        { error: "Canvas token expired or invalid. Open Grade center → Canvas token to paste a new one.", code: "TOKEN_INVALID" },
+        { status: 401 }
+      )
+    }
 
     // Canvas course totals are stored in canvas_scores — separate from the
     // manual per-assessment scores in grade_scores, which are never touched here.

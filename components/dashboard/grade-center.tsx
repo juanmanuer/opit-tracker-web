@@ -1,11 +1,12 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { X, RefreshCw, Target, Award, ChevronDown, PieChart } from "lucide-react"
+import { X, RefreshCw, Target, Award, ChevronDown, PieChart, KeyRound } from "lucide-react"
 import { TERM_COURSES, type Term } from "@/lib/store"
 import { GRADE_WEIGHTS, GRADED_TERMS, getGrade, courseStats } from "@/lib/grades"
 
 type Scores = Record<string, (number | null)[]>          // courseCode -> scores per assessment
+type TokenStatus = { source: "database" | "env" | "none"; expiresAt: string | null; daysLeft: number | null; lastRenewed: string | null; lastError: string | null }
 type CanvasInfo = { courseCode: string; gradeInfo: { currentScore?: number | null } | null; error?: string | null }
 
 interface Props {
@@ -34,6 +35,37 @@ export function GradeCenter({ activeTerm, onClose }: Props) {
   const [canvas, setCanvas] = useState<Record<string, number | null>>({})
   const [sync, setSync] = useState<{ state: "idle" | "syncing" | "ok" | "error"; msg?: string }>({ state: "idle" })
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [token, setToken] = useState<TokenStatus | null>(null)
+  const [showToken, setShowToken] = useState(false)
+  const [tokenInput, setTokenInput] = useState("")
+  const [tokenBusy, setTokenBusy] = useState(false)
+  const [tokenMsg, setTokenMsg] = useState<{ ok: boolean; text: string } | null>(null)
+
+  // ── Canvas token status ────────────────────────────────────────────────
+  const loadToken = () =>
+    fetch("/api/canvas/token").then(r => (r.ok ? r.json() : null)).then(d => d && !d.error && setToken(d)).catch(() => {})
+  useEffect(() => { loadToken() }, [])
+
+  const tokenAction = async (body: object, okText: string) => {
+    setTokenBusy(true); setTokenMsg(null)
+    try {
+      const res = await fetch("/api/canvas/token", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`)
+      setToken(data); setTokenInput(""); setTokenMsg({ ok: true, text: okText })
+    } catch (err) {
+      setTokenMsg({ ok: false, text: String(err).replace("Error: ", "") })
+    } finally {
+      setTokenBusy(false)
+    }
+  }
+
+  const tokenTone =
+    !token || token.source === "none" || token.lastError || (token.daysLeft !== null && token.daysLeft <= 3) ? "bad"
+    : token.source === "env" || (token.daysLeft !== null && token.daysLeft < 10) ? "warn" : "good"
+  const toneClass = { good: "text-emerald-400 border-emerald-400/40", warn: "text-amber-400 border-amber-400/40", bad: "text-[hsl(var(--destructive))] border-[hsl(var(--destructive)/0.5)]" }[tokenTone]
+  const tokenLabel = !token ? "Canvas token" : token.source === "none" ? "No Canvas token"
+    : token.daysLeft !== null ? (token.daysLeft <= 0 ? "Token expired" : `Token · ${token.daysLeft}d`) : "Token · not managed"
 
   // ── Load saved scores for every term (read-only) ───────────────────────
   useEffect(() => {
@@ -65,6 +97,7 @@ export function GradeCenter({ activeTerm, onClose }: Props) {
     try {
       const res = await fetch(`/api/canvas/sync?term=${encodeURIComponent(term)}`)
       const data = await res.json()
+      if (data?.code === "TOKEN_INVALID") setShowToken(true)
       if (!res.ok || !Array.isArray(data)) throw new Error(data?.error ?? `HTTP ${res.status}`)
       setCanvas(Object.fromEntries((data as CanvasInfo[]).map(c => [c.courseCode, c.gradeInfo?.currentScore ?? null])))
       const failed = (data as CanvasInfo[]).filter(c => c.error).map(c => c.courseCode)
@@ -143,6 +176,10 @@ export function GradeCenter({ activeTerm, onClose }: Props) {
               <span className={`h-1.5 w-1.5 rounded-full ${sync.state === "ok" ? "bg-emerald-400" : sync.state === "error" ? "bg-[hsl(var(--destructive))]" : "bg-[hsl(var(--muted-foreground))]"}`} />
               {sync.state === "syncing" ? "Syncing with Canvas…" : sync.msg ?? "Canvas not synced yet"}
             </span>
+            <button onClick={() => setShowToken(p => !p)} title="Canvas access token"
+              className={`flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-[hsl(var(--muted))] ${toneClass}`}>
+              <KeyRound className="h-3.5 w-3.5" /> {tokenLabel}
+            </button>
             <button onClick={runSync} disabled={sync.state === "syncing"}
               className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))] transition-colors disabled:opacity-60">
               <RefreshCw className={`h-3.5 w-3.5 ${sync.state === "syncing" ? "animate-spin" : ""}`} /> Sync
@@ -154,6 +191,40 @@ export function GradeCenter({ activeTerm, onClose }: Props) {
         </div>
 
         {saveError && <p className="text-xs text-[hsl(var(--destructive))]">{saveError}</p>}
+
+        {/* Canvas token panel */}
+        {(showToken || tokenTone === "bad") && (
+          <div className="rounded-2xl bg-card border border-border p-4 flex flex-col gap-3">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <p className={`text-sm font-medium ${fg}`}>Canvas access token</p>
+                <p className={`text-[11px] ${muted}`}>
+                  {!token ? "Checking…"
+                    : token.source === "database"
+                      ? <>Renews automatically when fewer than 10 days remain{token.expiresAt && <> · expires {new Date(token.expiresAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</>}{token.lastRenewed && <> · last renewed {new Date(token.lastRenewed).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</>}</>
+                      : token.source === "env"
+                        ? "Using the token from Vercel settings. Press Renew now once to switch on automatic renewal."
+                        : "No token yet. Paste one below."}
+                </p>
+                {token?.lastError && <p className="text-[11px] mt-1 text-[hsl(var(--destructive))]">{token.lastError}</p>}
+              </div>
+              <button onClick={() => tokenAction({ action: "renew" }, "Renewed. Automatic renewal is on.")} disabled={tokenBusy || token?.source === "none"}
+                className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))] disabled:opacity-50">
+                <RefreshCw className={`h-3.5 w-3.5 ${tokenBusy ? "animate-spin" : ""}`} /> Renew now
+              </button>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <input type="password" value={tokenInput} onChange={e => setTokenInput(e.target.value)} placeholder="Paste a new Canvas token" autoComplete="off"
+                className="flex-1 min-w-[200px] text-xs rounded-md px-2.5 py-1.5 bg-[hsl(var(--muted))] border border-border outline-none focus:border-[hsl(var(--primary))]" />
+              <button onClick={() => tokenAction({ token: tokenInput }, "Token saved.")} disabled={tokenBusy || tokenInput.trim().length < 20}
+                className="text-[11px] font-medium px-3 py-1.5 rounded-lg bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] disabled:opacity-50">
+                Save token
+              </button>
+            </div>
+            <p className={`text-[11px] ${muted}`}>New token: Canvas → Account → Settings → + New Access Token. It's stored encrypted and never shown again.</p>
+            {tokenMsg && <p className={`text-[11px] ${tokenMsg.ok ? "text-emerald-400" : "text-[hsl(var(--destructive))]"}`}>{tokenMsg.text}</p>}
+          </div>
+        )}
 
         {/* Top: ring + term history + target */}
         <div className="grid gap-3 sm:grid-cols-[170px_minmax(0,1fr)]">
