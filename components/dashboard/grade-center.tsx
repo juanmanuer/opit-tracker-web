@@ -240,7 +240,17 @@ export function GradeCenter({ activeTerm, onClose }: Props) {
               <PieChart className="h-4 w-4 text-[hsl(var(--primary))]" />
             </div>
             <h2 className={`text-base font-semibold ${fg}`}>Grade center</h2>
-            <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-[hsl(var(--primary)/0.12)] text-[hsl(var(--primary))]">{term}</span>
+            {/* Term switcher */}
+            <div role="tablist" aria-label="Term" className="flex items-center gap-0.5 p-0.5 rounded-full bg-[hsl(var(--muted))]">
+              {GRADED_TERMS.map(t => (
+                <button key={t} role="tab" aria-selected={t === term} onClick={() => switchTerm(t)}
+                  className={`text-[11px] font-medium px-3 py-1 rounded-full transition-colors ${t === term
+                    ? "bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]"
+                    : `${muted} hover:text-[hsl(var(--foreground))]`}`}>
+                  {t}{t === defaultTerm && t !== term && <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-[hsl(var(--primary))] align-middle" title="Current term" />}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <span className={`flex items-center gap-1.5 text-[11px] ${sync.state === "error" ? "text-[hsl(var(--destructive))]" : muted}`}>
