@@ -13,7 +13,9 @@ type CanvasInfo = { courseCode: string; gradeInfo: { currentScore?: number | nul
 
 interface Props {
   activeTerm: Term
-  onClose: () => void
+  onClose?: () => void
+  embedded?: boolean        // true = rendered as a page inside the app (no overlay, no close button)
+  onDataChanged?: () => void // tell the rest of the app that grades/bonuses changed
 }
 
 const muted = "text-[hsl(var(--muted-foreground))]"
@@ -24,7 +26,7 @@ function emptyScores(term: string): Scores {
   return Object.fromEntries(Object.entries(weights).map(([code, w]) => [code, w.map(() => null)]))
 }
 
-export function GradeCenter({ activeTerm, onClose }: Props) {
+export function GradeCenter({ activeTerm, onClose, embedded = false, onDataChanged }: Props) {
   const defaultTerm = GRADE_WEIGHTS[activeTerm] ? activeTerm : GRADED_TERMS[GRADED_TERMS.length - 1]
   const [term, setTerm] = useState<string>(defaultTerm)   // term shown in the cards (click a term card to switch)
   const [allScores, setAllScores] = useState<Record<string, Scores>>(
@@ -134,6 +136,7 @@ export function GradeCenter({ activeTerm, onClose }: Props) {
       setAllScores(prev => ({ ...prev, [term]: fresh }))
       await loadBonuses()
       setConflicts(imp.conflicts ?? [])
+      onDataChanged?.()
       setAccepted(new Set((imp.conflicts ?? []).map((c: Conflict) => `${c.courseCode}-${c.idx}`)))
 
       const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
@@ -155,6 +158,7 @@ export function GradeCenter({ activeTerm, onClose }: Props) {
       const [, fresh] = await loadScores(term)
       setAllScores(prev => ({ ...prev, [term]: fresh }))
       setConflicts([])
+      onDataChanged?.()
     } catch {
       setSaveError("Couldn't apply the Canvas grades. Try again.")
     } finally {
@@ -180,6 +184,7 @@ export function GradeCenter({ activeTerm, onClose }: Props) {
         body: JSON.stringify({ term, courseCode: code, assessmentIndex: idx, ...(value !== null && { score: value }) }),
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      onDataChanged?.()
     } catch {
       setSaveError("Couldn't save that score. Check your connection and try again.")
     }
@@ -230,8 +235,9 @@ export function GradeCenter({ activeTerm, onClose }: Props) {
   const R = 44, C = 2 * Math.PI * R
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-[hsl(var(--background)/0.97)] backdrop-blur-sm" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 flex flex-col gap-4">
+    <div className={embedded ? "" : "fixed inset-0 z-50 overflow-y-auto bg-[hsl(var(--background)/0.97)] backdrop-blur-sm"}
+      onClick={e => !embedded && e.target === e.currentTarget && onClose?.()}>
+      <div className={`${embedded ? "" : "mx-auto max-w-5xl px-4 py-6 sm:px-6"} flex flex-col gap-4`}>
 
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -240,8 +246,8 @@ export function GradeCenter({ activeTerm, onClose }: Props) {
               <PieChart className="h-4 w-4 text-[hsl(var(--primary))]" />
             </div>
             <h2 className={`text-base font-semibold ${fg}`}>Grade center</h2>
-            {/* Term switcher */}
-            <div role="tablist" aria-label="Term" className="flex items-center gap-0.5 p-0.5 rounded-full bg-[hsl(var(--muted))]">
+            {/* Term switcher (hidden when embedded: the app header already has one) */}
+            {!embedded && <div role="tablist" aria-label="Term" className="flex items-center gap-0.5 p-0.5 rounded-full bg-[hsl(var(--muted))]">
               {GRADED_TERMS.map(t => (
                 <button key={t} role="tab" aria-selected={t === term} onClick={() => switchTerm(t)}
                   className={`text-[11px] font-medium px-3 py-1 rounded-full transition-colors ${t === term
@@ -250,7 +256,7 @@ export function GradeCenter({ activeTerm, onClose }: Props) {
                   {t}{t === defaultTerm && t !== term && <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-[hsl(var(--primary))] align-middle" title="Current term" />}
                 </button>
               ))}
-            </div>
+            </div>}
           </div>
           <div className="flex items-center gap-3">
             <span className={`flex items-center gap-1.5 text-[11px] ${sync.state === "error" ? "text-[hsl(var(--destructive))]" : muted}`}>
@@ -265,9 +271,11 @@ export function GradeCenter({ activeTerm, onClose }: Props) {
               className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg border border-border hover:bg-[hsl(var(--muted))] transition-colors disabled:opacity-60">
               <RefreshCw className={`h-3.5 w-3.5 ${sync.state === "syncing" ? "animate-spin" : ""}`} /> Sync
             </button>
-            <button onClick={onClose} aria-label="Close" className={`h-8 w-8 rounded-lg flex items-center justify-center hover:bg-[hsl(var(--muted))] ${muted}`}>
-              <X className="h-4 w-4" />
-            </button>
+            {!embedded && (
+              <button onClick={onClose} aria-label="Close" className={`h-8 w-8 rounded-lg flex items-center justify-center hover:bg-[hsl(var(--muted))] ${muted}`}>
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </div>
 

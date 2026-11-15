@@ -75,6 +75,32 @@ const TERM_DATA: Record<string, Course[]> = {
       { label: "Ass. 2", weight: 50, score: null },
     ]},
   ],
+  "Term 3": [
+    { code: "COMP-3001", name: "Introduction to Databases", color: "#0891B2", assessments: [
+      { label: "Ass. 1", weight: 60, score: null },
+      { label: "Ass. 2", weight: 40, score: null },
+    ]},
+    { code: "COMP-3002", name: "Cloud Computing Infrastructure", color: "#059669", assessments: [
+      { label: "Ass. 1", weight: 60, score: null },
+      { label: "Ass. 2", weight: 40, score: null },
+    ]},
+    { code: "COMP-3003", name: "Programming Paradigms", color: "#6366F1", assessments: [
+      { label: "Ass. 1", weight: 10, score: null },
+      { label: "Ass. 2", weight: 30, score: null },
+      { label: "Ass. 3", weight: 30, score: null },
+    ]},
+    { code: "COMP-3004", name: "Intro to Artificial Intelligence", color: "#D97706", assessments: [
+      { label: "Ass. 1", weight: 33.3, score: null },
+      { label: "Ass. 2", weight: 33.3, score: null },
+      { label: "Ass. 3", weight: 33.3, score: null },
+    ]},
+    { code: "COMP-3005", name: "Business Strategy", color: "#DC2626", assessments: [
+      { label: "Ass. 1", weight: 25, score: null },
+      { label: "Ass. 2", weight: 25, score: null },
+      { label: "Ass. 3", weight: 25, score: null },
+      { label: "Ass. 4", weight: 25, score: null },
+    ]},
+  ],
 }
 
 function getGrade(score: number) {
@@ -96,7 +122,7 @@ interface Props {
 }
 
 export function GradeCalculator({ activeTerm, onClose }: Props) {
-  const termKey = (activeTerm === "Term 1" || activeTerm === "Term 2") ? activeTerm : "Term 2"
+  const termKey = TERM_DATA[activeTerm] ? activeTerm : "Term 2"
   const [courses, setCourses] = useState<Course[]>(
     (TERM_DATA[termKey] ?? []).map(c => ({ ...c, assessments: c.assessments.map(a => ({ ...a })) }))
   )
