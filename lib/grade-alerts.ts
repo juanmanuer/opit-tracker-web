@@ -2,7 +2,8 @@
 // Hourly job: detects newly graded assessments / bonuses in Canvas,
 // fills the empty boxes in the app and notifies by email + phone (ntfy).
 import { sql } from "@/lib/db"
-import { DEFAULT_TERM, TERM_COURSES, type Term } from "@/lib/store"
+import { getCatalog } from "@/lib/catalog-server"
+import { termData } from "@/lib/catalog"
 import { fetchCanvasTermGrades, syncTermFromCanvas } from "@/lib/canvas-grades"
 import { deadlineReminders } from "@/lib/reminders"
 import { getUser, usersWithCanvas, type AppUser } from "@/lib/users"
@@ -26,24 +27,27 @@ async function ensureTable() {
 }
 
 // Cron: every student with a Canvas connection
-export async function checkAllUsers(term: string = DEFAULT_TERM) {
+export async function checkAllUsers() {
   await ensureTable()
   const results: Record<string, unknown> = {}
   for (const u of await usersWithCanvas()) {
     if (u.role !== "student") continue
-    results[u.email] = await checkNewGrades(u, term).catch(err => ({ error: String(err) }))
+    results[u.email] = await checkNewGrades(u).catch(err => ({ error: String(err) }))
   }
   return { users: Object.keys(results).length, results }
 }
 
-export async function checkNewGrades(user: AppUser, term: string = DEFAULT_TERM) {
+export async function checkNewGrades(user: AppUser, termArg?: string) {
   await ensureTable()
   const email = user.email
-  const canvas = await fetchCanvasTermGrades(term, email)
+  const catalog = await getCatalog(email, { refreshIfStale: true })
+  const term = termArg ?? catalog.defaultTerm
+  if (!term || !catalog.terms[term]) return { term, firstRun: false, newGrades: 0, errors: ["No courses found in Canvas yet"] }
+  const canvas = await fetchCanvasTermGrades(term, email, catalog)
   const seenRows = await sql`SELECT course_code, item_key, score FROM grade_alerts_seen WHERE email = ${email} AND term = ${term}`
   const seen = new Map(seenRows.map((r: any) => [`${r.course_code}|${r.item_key}`, Number(r.score)]))
   const firstRun = seenRows.length === 0
-  const names = Object.fromEntries((TERM_COURSES[term as Term] ?? []).map(c => [c.code, c.name]))
+  const names = Object.fromEntries(termData(term, catalog).courses.map(c => [c.code, c.name]))
 
   const fresh: NewGrade[] = []
   const errors: string[] = []
@@ -67,14 +71,14 @@ export async function checkNewGrades(user: AppUser, term: string = DEFAULT_TERM)
   }
 
   // Keep the app up to date: fill empty boxes + official bonuses (never overwrites your own values)
-  if (fresh.length > 0 || firstRun) await syncTermFromCanvas(email, term, { applyFills: true })
+  if (fresh.length > 0 || firstRun) await syncTermFromCanvas(email, term, { applyFills: true, catalog })
 
   if (fresh.length > 0) await Promise.all([user.email_alerts ? sendEmail(email, term, fresh) : null, sendPush(user, term, fresh)])
 
   // Deadline reminders (48 h / 6 h) using the Canvas dates we just fetched
-  if (term === DEFAULT_TERM && user.legacy_catalog) {
+  if (term === catalog.defaultTerm) {
     const dates = Object.fromEntries(canvas.map(c => [c.code, c.assessments.map(x => ({ idx: x.idx, dueAt: x.dueAt ?? null, unlockAt: x.unlockAt ?? null, url: x.url ?? null }))]))
-    await deadlineReminders(user, dates).catch(err => console.error("Deadline reminders failed:", err))
+    await deadlineReminders(user, dates, catalog).catch(err => console.error("Deadline reminders failed:", err))
   }
   return { term, firstRun, newGrades: fresh.length, errors }
 }

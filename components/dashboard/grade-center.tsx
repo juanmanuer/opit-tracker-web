@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { X, RefreshCw, Target, Award, ChevronDown, PieChart, KeyRound, Radio, CheckSquare } from "lucide-react"
-import { TERM_COURSES, initialPractices, type Term } from "@/lib/store"
-import { GRADE_WEIGHTS, GRADED_TERMS, getGrade, courseStats } from "@/lib/grades"
+import type { Term } from "@/lib/store"
+import { getGrade, courseStats } from "@/lib/grades"
+import { gradedTerms, termData, allPractices, type WeightSource } from "@/lib/catalog"
+import { useCatalog } from "@/components/app/catalog-gate"
 
 type Scores = Record<string, (number | null)[]>          // courseCode -> scores per assessment
 type Bonus = { live: boolean | null; practices: boolean | null }
@@ -22,11 +24,14 @@ const muted = "text-[hsl(var(--muted-foreground))]"
 const fg = "text-[hsl(var(--foreground))]"
 
 function emptyScores(term: string): Scores {
-  const weights = GRADE_WEIGHTS[term] ?? {}
+  const weights = termData(term).weights
   return Object.fromEntries(Object.entries(weights).map(([code, w]) => [code, w.map(() => null)]))
 }
 
 export function GradeCenter({ activeTerm, onClose, embedded = false, onDataChanged }: Props) {
+  const { catalog, setCatalog } = useCatalog()
+  const GRADED_TERMS = gradedTerms(catalog)
+  const GRADE_WEIGHTS: Record<string, Record<string, number[]>> = Object.fromEntries(GRADED_TERMS.map(t => [t, termData(t, catalog).weights]))
   const defaultTerm = GRADE_WEIGHTS[activeTerm] ? activeTerm : GRADED_TERMS[GRADED_TERMS.length - 1]
   const [term, setTerm] = useState<string>(defaultTerm)   // term shown in the cards (click a term card to switch)
   const [allScores, setAllScores] = useState<Record<string, Scores>>(
@@ -196,7 +201,7 @@ export function GradeCenter({ activeTerm, onClose, embedded = false, onDataChang
   const bonusInfo = (t: string, code: string) => {
     const off = official[t]?.[code]
     const attended = attendance[code] ?? 0
-    const practices = initialPractices.filter(p => p.courseCode === code)
+    const practices = allPractices(catalog).filter(p => p.courseCode === code)
     const done = practices.filter(p => practicesDone.has(p.id)).length
     const live = off?.live ?? (attended >= 7)
     const prac = off?.practices ?? (practices.length > 0 && done === practices.length)
@@ -230,7 +235,23 @@ export function GradeCenter({ activeTerm, onClose, embedded = false, onDataChang
     return (((target * n) - banked) / remaining) * 100
   }, [current.stats, target])
 
-  const courses = TERM_COURSES[term as Term] ?? []
+  const courses = termData(term, catalog).courses
+  const weightSource = termData(term, catalog).weightSource
+  const [editingWeights, setEditingWeights] = useState<string | null>(null)
+  const saveWeights = async (code: string, weights: number[] | null) => {
+    const res = await fetch("/api/catalog", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "weights", term, courseCode: code, weights }) })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) return data.error ?? "Couldn't save the weights"
+    // keep score boxes aligned with the new number of assessments
+    setAllScores(prev => {
+      const w = data.catalog.terms[term]?.weights?.[code] ?? []
+      const old = prev[term]?.[code] ?? []
+      return { ...prev, [term]: { ...prev[term], [code]: w.map((_: number, i: number) => old[i] ?? null) } }
+    })
+    setCatalog(data.catalog)
+    setEditingWeights(null)
+    return null
+  }
   const ringPct = termAvg !== null ? Math.min(100, (termAvg / 110) * 100) : 0
   const R = 44, C = 2 * Math.PI * R
 
@@ -469,6 +490,10 @@ export function GradeCenter({ activeTerm, onClose, embedded = false, onDataChang
                         <CheckSquare className="h-3 w-3" />{b.pracOfficial ? (b.prac ? "+5" : "0") : b.prac ? "+5" : `${b.done}/${b.totalPractices}`}
                       </span>
                     )}
+                    {weightSource[course.code] === "estimated" && (
+                      <span title="Weights couldn't be read from Canvas — open the course to check them"
+                        className="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-400/15 text-amber-500">check weights</span>
+                    )}
                     {canvasScore != null && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]">Canvas {canvasScore}%</span>
                     )}
@@ -479,6 +504,11 @@ export function GradeCenter({ activeTerm, onClose, embedded = false, onDataChang
                 {/* Edit scores */}
                 {isOpen && (
                   <div className="mt-3 pt-3 border-t border-border flex flex-col gap-2">
+                    <WeightsLine source={weightSource[course.code]} onEdit={() => setEditingWeights(editingWeights === course.code ? null : course.code)} />
+                    {editingWeights === course.code && (
+                      <WeightsEditor weights={weights} color={course.color} canReset={weightSource[course.code] === "you"}
+                        onSave={w => saveWeights(course.code, w)} onCancel={() => setEditingWeights(null)} />
+                    )}
                     {weights.map((w, i) => (
                       <label key={i} className="flex items-center justify-between gap-2">
                         <span className={`text-xs ${fg}`}>Assessment {i + 1} <span className={muted}>· {w}%</span></span>
@@ -544,6 +574,64 @@ function AlertSettings() {
           className="font-mono px-1.5 py-0.5 rounded bg-[hsl(var(--muted))] hover:bg-[hsl(var(--border))]">{copied ? "copied ✓" : s.ntfyTopic}</button>
         {" "}— keep it to yourself.
       </p>
+    </div>
+  )
+}
+
+
+const SOURCE_LABEL: Record<WeightSource, string> = {
+  "built-in": "entered by hand",
+  "canvas-groups": "from Canvas grade groups",
+  description: "from the assessment pages in Canvas",
+  syllabus: "from the course syllabus",
+  points: "from Canvas points",
+  estimated: "estimated (equal split) — please check them against the syllabus",
+  you: "set by you",
+}
+
+function WeightsLine({ source, onEdit }: { source?: WeightSource; onEdit: () => void }) {
+  if (!source) return null
+  return (
+    <div className="flex items-center justify-between gap-2 text-[11px]">
+      <span className={source === "estimated" ? "text-amber-500" : muted}>Weights {SOURCE_LABEL[source]}</span>
+      <button onClick={onEdit} className="underline text-[hsl(var(--primary))]">Edit weights</button>
+    </div>
+  )
+}
+
+function WeightsEditor({ weights, color, canReset, onSave, onCancel }: {
+  weights: number[]; color: string; canReset: boolean
+  onSave: (w: number[] | null) => Promise<string | null>; onCancel: () => void
+}) {
+  const [w, setW] = useState<string[]>(weights.map(String))
+  const [err, setErr] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const nums = w.map(x => parseFloat(x))
+  const total = nums.reduce((a, b) => a + (isNaN(b) ? 0 : b), 0)
+  const valid = nums.length > 0 && nums.every(n => !isNaN(n) && n >= 0 && n <= 100) && Math.abs(total - 100) <= 1
+  const go = async (value: number[] | null) => { setBusy(true); setErr(await onSave(value)); setBusy(false) }
+  return (
+    <div className="rounded-xl border border-border bg-[hsl(var(--muted)/0.4)] p-3 flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        {w.map((v, i) => (
+          <label key={i} className="flex items-center gap-1 text-[11px]">
+            A{i + 1}
+            <input type="number" min={0} max={100} value={v} onChange={e => setW(w.map((x, j) => (j === i ? e.target.value : x)))}
+              className="w-14 text-center rounded-md px-1 py-1 bg-background border border-border outline-none focus:border-[hsl(var(--primary))]" style={{ color }} />%
+          </label>
+        ))}
+        <button onClick={() => setW([...w, "0"])} disabled={w.length >= 12} className={`text-[11px] px-2 py-1 rounded-md border border-dashed border-border ${muted}`}>+ assessment</button>
+        {w.length > 1 && <button onClick={() => setW(w.slice(0, -1))} className={`text-[11px] px-2 py-1 rounded-md border border-dashed border-border ${muted}`}>− last</button>}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className={`text-[11px] ${valid ? "text-emerald-400" : "text-amber-500"}`}>Total {total}%{valid ? "" : " — must be 100"}</span>
+        <span className="ml-auto flex gap-2">
+          {canReset && <button onClick={() => go(null)} disabled={busy} className={`text-[11px] px-2.5 py-1 rounded-md border border-border ${muted}`}>Back to automatic</button>}
+          <button onClick={onCancel} className={`text-[11px] px-2.5 py-1 rounded-md border border-border ${muted}`}>Cancel</button>
+          <button onClick={() => go(nums)} disabled={!valid || busy} className="text-[11px] font-medium px-2.5 py-1 rounded-md bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] disabled:opacity-50">Save</button>
+        </span>
+      </div>
+      {err && <p className="text-[11px] text-[hsl(var(--destructive))]">{err}</p>}
     </div>
   )
 }

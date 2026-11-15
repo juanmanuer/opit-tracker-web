@@ -2,8 +2,8 @@
 // Builds the term's timeline: deadlines (Canvas dates when available), the
 // 13 weekly live sessions, office hours and your personal events.
 // Pure functions — used by the Plan screen AND the calendar subscription feed.
-import { TERM_PROFESSORS } from "@/lib/store"
-import { coursesOf, assessmentsOf, parseDeadline, parseLiveSession, TERM_START, LIVE_SESSIONS_PER_COURSE } from "@/lib/academic"
+import { coursesOf, parseDeadline, parseLiveSession, LIVE_SESSIONS_PER_COURSE } from "@/lib/academic"
+import { getActiveCatalog, termData, termStart, type Catalog } from "@/lib/catalog"
 
 export type CanvasDates = Record<string, { idx: number; dueAt?: string | null; unlockAt?: string | null; url?: string | null }[]>
 
@@ -35,30 +35,33 @@ const atTime = (d: Date, h: number, m: number) => new Date(d.getFullYear(), d.ge
 // Calendar-day arithmetic (adding 24h × n breaks across daylight-saving changes)
 export const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n)
 
-export function termMonday(term: string) {
-  const s = new Date(`${TERM_START[term]}T00:00:00`)
+export function termMonday(term: string, cat: Catalog = getActiveCatalog()) {
+  const s = new Date(`${termStart(term, cat) ?? new Date().toISOString().slice(0, 10)}T00:00:00`)
   return new Date(s.getFullYear(), s.getMonth(), s.getDate() - ((s.getDay() + 6) % 7))
 }
 
-export function buildPlan(term: string, canvas: CanvasDates = {}, personal: PersonalEvent[] = []): PlanItem[] {
+export function buildPlan(term: string, canvas: CanvasDates = {}, personal: PersonalEvent[] = [], cat: Catalog = getActiveCatalog()): PlanItem[] {
   const items: PlanItem[] = []
-  const monday = termMonday(term)
+  const monday = termMonday(term, cat)
+  const td = termData(term, cat)
 
-  for (const c of coursesOf(term)) {
-    // Deadlines — Canvas dates win over the hard-coded ones
-    assessmentsOf(c.code).forEach((a, idx) => {
+  for (const c of coursesOf(term, cat)) {
+    // Deadlines — live Canvas dates win, then dates saved in the catalogue, then the hand-entered text
+    td.assessments.filter(a => a.courseCode === c.code).forEach((a, idx) => {
       const cv = canvas[c.code]?.find(x => x.idx === idx)
-      const due = cv?.dueAt ? new Date(cv.dueAt) : parseDeadline(a.deadline, term)
+      const dueAt = cv?.dueAt ?? a.dueAt ?? null
+      const due = dueAt ? new Date(dueAt) : parseDeadline(a.deadline, term, cat)
       if (!due) return
-      const unlock = cv?.unlockAt ? new Date(cv.unlockAt) : new Date(due.getTime() - 14 * DAY)
+      const unlockAt = cv?.unlockAt ?? a.unlockAt ?? null
+      const unlock = unlockAt ? new Date(unlockAt) : new Date(due.getTime() - 14 * DAY)
       items.push({
         id: `dl-${a.id}`, kind: "deadline", courseCode: c.code, title: a.title,
         start: due, end: due, windowStart: unlock < due ? unlock : new Date(due.getTime() - 14 * DAY),
-        weight: a.weight, assessmentId: a.id, assessmentIdx: idx, url: cv?.url ?? null, exact: !!cv?.dueAt,
+        weight: a.weight, assessmentId: a.id, assessmentIdx: idx, url: cv?.url ?? a.url ?? null, exact: !!dueAt,
       })
     })
 
-    const prof = (TERM_PROFESSORS[term] ?? []).find(p => p.courseCode === c.code)
+    const prof = td.professors.find(p => p.courseCode === c.code)
     if (!prof) continue
 
     // 13 weekly live sessions from week 1
@@ -74,8 +77,8 @@ export function buildPlan(term: string, canvas: CanvasDates = {}, personal: Pers
     }
 
     // Office hours: "Even weeks (2,4,6,8,10,12) · Saturdays 13:30–14:30"
-    const oh = parseLiveSession(prof.officeHours)
-    const weeks = prof.officeHours.match(/\(([\d,\s]+)\)/)?.[1].split(",").map(w => parseInt(w)).filter(Boolean) ?? []
+    const oh = parseLiveSession(prof.officeHours ?? "")
+    const weeks = (prof.officeHours ?? "").match(/\(([\d,\s]+)\)/)?.[1].split(",").map(w => parseInt(w)).filter(Boolean) ?? []
     if (oh) for (const w of weeks) {
       const day = addDays(monday, (w - 1) * 7 + ((oh.weekday + 6) % 7))
       items.push({

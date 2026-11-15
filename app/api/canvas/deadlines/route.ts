@@ -8,7 +8,7 @@ import type { CanvasDates } from "@/lib/plan"
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.email) return NextResponse.json({}, { status: 401 })
-  const term = new URL(req.url).searchParams.get("term") ?? "Term 3"
+  const term = new URL(req.url).searchParams.get("term") ?? ""
   try {
     const courses = await fetchCanvasTermGrades(term, session.user.email)
     const out: CanvasDates = {}

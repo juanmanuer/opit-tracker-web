@@ -1,5 +1,5 @@
 import { sql } from "@/lib/db"
-import { DEFAULT_TERM } from "@/lib/store"
+import { getCatalog } from "@/lib/catalog-server"
 import { emailForToken } from "@/lib/calendar-feed"
 import { fetchCanvasTermGrades } from "@/lib/canvas-grades"
 import { buildPlan, toICS, type CanvasDates, type PersonalEvent } from "@/lib/plan"
@@ -11,9 +11,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
   const email = await emailForToken(token.replace(/\.ics$/, ""))
   if (!email) return new Response("Not found", { status: 404 })
 
+  const catalog = await getCatalog(email)
+  const term = catalog.defaultTerm
   let canvas: CanvasDates = {}
   try {
-    for (const c of await fetchCanvasTermGrades(DEFAULT_TERM, email)) {
+    for (const c of await fetchCanvasTermGrades(term, email, catalog)) {
       canvas[c.code] = c.assessments.map(a => ({ idx: a.idx, dueAt: a.dueAt ?? null, unlockAt: a.unlockAt ?? null, url: a.url ?? null }))
     }
   } catch { canvas = {} } // fall back to the dates stored in the app
@@ -23,11 +25,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
     FROM calendar_events WHERE email = ${email}
   `.catch(() => [])) as PersonalEvent[]
 
-  const ics = toICS(buildPlan(DEFAULT_TERM, canvas, personal), `OPIT ${DEFAULT_TERM}`)
+  const ics = toICS(buildPlan(term, canvas, personal, catalog), `OPIT ${term}`)
   return new Response(ics, {
     headers: {
       "Content-Type": "text/calendar; charset=utf-8",
-      "Content-Disposition": `inline; filename="opit-${DEFAULT_TERM.replace(" ", "").toLowerCase()}.ics"`,
+      "Content-Disposition": `inline; filename="opit-${(term || "calendar").replace(/\s+/g, "").toLowerCase()}.ics"`,
       "Cache-Control": "public, max-age=1800",
     },
   })

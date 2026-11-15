@@ -8,7 +8,7 @@ async function handle(req: Request) {
   const u = new URL(req.url)
   const email = (u.searchParams.get("u") ?? "").toLowerCase(), c = u.searchParams.get("c") ?? "", n = u.searchParams.get("n") ?? "", e = u.searchParams.get("e") ?? "", s = u.searchParams.get("s") ?? ""
   const lesson = parseInt(n)
-  if (!/^COMP-\d{4}$/.test(c) || !(lesson >= 1 && lesson <= 13) || !email || !verifyAttend(email, c, n, e, s)) {
+  if (!/^[A-Za-z0-9-]{2,20}$/.test(c) || !(lesson >= 1 && lesson <= 13) || !email || !verifyAttend(email, c, n, e, s)) {
     return NextResponse.json({ error: "Invalid or expired link" }, { status: 403 })
   }
   // Same write as the app's attendance button

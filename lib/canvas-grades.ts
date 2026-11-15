@@ -3,8 +3,9 @@
 // and stores them in the app's tables. Shared by the import endpoint and
 // the hourly grade-alert job.
 import { sql } from "@/lib/db"
-import { CANVAS_COURSE_IDS, GRADE_WEIGHTS } from "@/lib/grades"
 import { getCanvasToken } from "@/lib/canvas-token"
+import { termData, type Catalog } from "@/lib/catalog"
+import { getCatalog } from "@/lib/catalog-server"
 
 export type CanvasAssessment = { idx: number; name: string; pct: number | null; gradedAt: string | null; dueAt?: string | null; unlockAt?: string | null; url?: string | null }
 export type CanvasCourse = {
@@ -31,13 +32,14 @@ function assessmentIndex(name: string): number | null {
   return m ? parseInt(m[1], 10) - 1 : null
 }
 
-export async function fetchCanvasTermGrades(term: string, email: string): Promise<CanvasCourse[]> {
+export async function fetchCanvasTermGrades(term: string, email: string, cat?: Catalog): Promise<CanvasCourse[]> {
   const token = await getCanvasToken(email)
   if (!token) throw new Error("No Canvas token")
-  const courses = CANVAS_COURSE_IDS[term] ?? {}
+  const td = termData(term, cat ?? await getCatalog(email))
+  const courses = td.courses.filter(c => c.canvasId).map(c => [c.code, c.canvasId!] as const)
 
-  return Promise.all(Object.entries(courses).map(async ([code, id]) => {
-    const weights = GRADE_WEIGHTS[term]?.[code] ?? []
+  return Promise.all(courses.map(async ([code, id]) => {
+    const weights = td.weights[code] ?? []
     const assessments: CanvasAssessment[] = weights.map((_, idx) => ({ idx, name: `Assessment ${idx + 1}`, pct: null, gradedAt: null }))
     const bonus: CanvasCourse["bonus"] = { live: null, practices: null }
     try {
@@ -128,9 +130,9 @@ export async function writeBonus(email: string, term: string, courseCode: string
 
 // Compare Canvas with the app. Empty boxes get filled automatically;
 // different values are returned as conflicts for the user to review.
-export async function syncTermFromCanvas(email: string, term: string, opts: { applyFills: boolean }) {
+export async function syncTermFromCanvas(email: string, term: string, opts: { applyFills: boolean; catalog?: Catalog }) {
   await ensureGradeSchema()
-  const [canvas, app] = await Promise.all([fetchCanvasTermGrades(term, email), readAppScores(email, term)])
+  const [canvas, app] = await Promise.all([fetchCanvasTermGrades(term, email, opts.catalog), readAppScores(email, term)])
 
   const filled: { courseCode: string; idx: number; name: string; score: number }[] = []
   const conflicts: { courseCode: string; idx: number; name: string; canvas: number; app: number }[] = []

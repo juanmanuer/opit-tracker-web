@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { Video, Check, Radio, CheckSquare, ExternalLink, CalendarClock } from "lucide-react"
-import { DEFAULT_TERM, QUICK_LINKS } from "@/lib/store"
+import { QUICK_LINKS } from "@/lib/store"
+import { getActiveCatalog } from "@/lib/catalog"
 import { getGrade } from "@/lib/grades"
 import {
   coursesOf, assessmentsOf, practicesOf, parseDeadline, daysUntil, nextSessions, parseLiveSession,
@@ -19,7 +20,8 @@ export function TodayView({ term, academic, onOpenCourse }: { term: string; acad
   const [now, setNow] = useState(() => new Date())
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 30_000); return () => clearInterval(t) }, [])
 
-  const isCurrent = term === DEFAULT_TERM
+  const currentTerm = getActiveCatalog().defaultTerm
+  const isCurrent = term === currentTerm
   const courses = coursesOf(term)
   const color = (code: string) => courses.find(c => c.code === code)?.color ?? "#6B7280"
   const tr = termResult(state, term)
@@ -88,7 +90,7 @@ export function TodayView({ term, academic, onOpenCourse }: { term: string; acad
         ) : (
           <div className={`${card} p-4 flex items-center gap-3`}>
             <CalendarClock className={`h-5 w-5 ${muted}`} />
-            <p className={`text-sm ${muted}`}>{isCurrent ? "No live sessions in the next two weeks." : `${term} is finished. Switch to ${DEFAULT_TERM} for upcoming sessions.`}</p>
+            <p className={`text-sm ${muted}`}>{isCurrent ? "No live sessions in the next two weeks." : `${term} is finished. Switch to ${currentTerm} for upcoming sessions.`}</p>
           </div>
         )}
 

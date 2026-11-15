@@ -1,7 +1,7 @@
 // lib/digest.ts — Sunday weekly digest (email + phone)
 import { sql } from "@/lib/db"
-import { DEFAULT_TERM } from "@/lib/store"
-import { GRADE_WEIGHTS } from "@/lib/grades"
+import { getCatalog } from "@/lib/catalog-server"
+import type { Catalog } from "@/lib/catalog"
 import { coursesOf, courseResult, termResult, bonusInfo, LIVE_NEEDED, LIVE_SESSIONS_PER_COURSE, type AcademicState, type Bonus } from "@/lib/academic"
 import { buildPlan, type CanvasDates } from "@/lib/plan"
 import { fetchCanvasTermGrades } from "@/lib/canvas-grades"
@@ -13,7 +13,7 @@ const DAY = 86_400_000
 const malta = (d: Date, o: Intl.DateTimeFormatOptions) => d.toLocaleString("en-GB", { timeZone: "Europe/Malta", ...o })
 
 // Same data the app loads, read on the server
-async function loadState(email: string, term: string): Promise<AcademicState> {
+async function loadState(email: string, term: string, cat: Catalog): Promise<AcademicState> {
   const [att, prac, ass, grades, bonus] = await Promise.all([
     sql`SELECT course_code, lesson_number, status FROM attendance WHERE email = ${email}`,
     sql`SELECT practice_id FROM user_practices WHERE email = ${email} AND completed = true`,
@@ -23,7 +23,7 @@ async function loadState(email: string, term: string): Promise<AcademicState> {
   ])
   const attendance: AcademicState["attendance"] = {}
   att.forEach((r: any) => { (attendance[r.course_code] ??= {})[r.lesson_number] = r.status })
-  const scores = Object.fromEntries(Object.entries(GRADE_WEIGHTS[term] ?? {}).map(([c, w]) => [c, w.map(() => null as number | null)]))
+  const scores = Object.fromEntries(Object.entries(cat.terms[term]?.weights ?? {}).map(([c, w]) => [c, w.map(() => null as number | null)]))
   grades.forEach((r: any) => { if (scores[r.course_code] && r.assessment_index < scores[r.course_code].length) scores[r.course_code][r.assessment_index] = Number(r.score) })
   const official: Record<string, Bonus> = {}
   bonus.forEach((r: any) => { official[r.course_code] = { live: r.live, practices: r.practices } })
@@ -40,32 +40,35 @@ async function loadState(email: string, term: string): Promise<AcademicState> {
 export async function weeklyDigestAll(now = new Date()) {
   const results: Record<string, unknown> = {}
   for (const u of await usersWithCanvas()) {
-    if (u.role !== "student" || !u.legacy_catalog) continue
+    if (u.role !== "student") continue
     results[u.email] = await weeklyDigest(u.email, now).catch(err => ({ error: String(err) }))
   }
   return results
 }
 
-export async function weeklyDigest(email: string, now = new Date(), term = DEFAULT_TERM) {
+export async function weeklyDigest(email: string, now = new Date(), termArg?: string) {
   const user = await getUser(email)
   if (!user) throw new Error("Unknown user")
-  const state = await loadState(email, term)
+  const cat = await getCatalog(email)
+  const term = termArg ?? cat.defaultTerm
+  if (!term || !cat.terms[term]) return { skipped: "no courses yet" }
+  const state = await loadState(email, term, cat)
 
   let canvas: CanvasDates = {}
   try {
-    for (const c of await fetchCanvasTermGrades(term, email)) canvas[c.code] = c.assessments.map(a => ({ idx: a.idx, dueAt: a.dueAt ?? null, unlockAt: a.unlockAt ?? null, url: a.url ?? null }))
+    for (const c of await fetchCanvasTermGrades(term, email, cat)) canvas[c.code] = c.assessments.map(a => ({ idx: a.idx, dueAt: a.dueAt ?? null, unlockAt: a.unlockAt ?? null, url: a.url ?? null }))
   } catch { /* fall back to saved dates */ }
 
-  const plan = buildPlan(term, canvas)
+  const plan = buildPlan(term, canvas, [], cat)
   const weekEnd = new Date(now.getTime() + 7 * DAY)
-  const courses = coursesOf(term)
+  const courses = coursesOf(term, cat)
   const name = (code: string | null) => courses.find(c => c.code === code)?.name ?? code ?? ""
   const color = (code: string | null) => courses.find(c => c.code === code)?.color ?? "#888"
 
   // Coming week
   const deadlines = plan.filter(i => i.kind === "deadline" && instantOf(i) > now && instantOf(i) < weekEnd)
     .map(i => {
-      const r = courseResult(state, term, i.courseCode!)
+      const r = courseResult(state, term, i.courseCode!, cat)
       const done = r.scores[i.assessmentIdx!] != null || state.assessmentStatus[i.assessmentId!] === "done"
       return { i, done }
     })
@@ -77,7 +80,7 @@ export async function weeklyDigest(email: string, now = new Date(), term = DEFAU
   // Bonus at risk
   const risks: string[] = []
   for (const c of courses) {
-    const b = bonusInfo(state, term, c.code)
+    const b = bonusInfo(state, term, c.code, cat)
     const pastSessions = plan.filter(i => i.kind === "session" && i.courseCode === c.code && instantOf(i, "end") < now).length
     const left = LIVE_SESSIONS_PER_COURSE - pastSessions
     const need = LIVE_NEEDED - b.attended
@@ -88,7 +91,7 @@ export async function weeklyDigest(email: string, now = new Date(), term = DEFAU
     if (!b.prac && !b.pracOfficial && b.totalPractices > 0) risks.push(`${c.code}: ${b.totalPractices - b.done} practices left for +5`)
   }
 
-  const tr = termResult(state, term)
+  const tr = termResult(state, term, cat)
 
   // ── Email ──
   const row = (left: string, right: string, accent: string) =>

@@ -5,7 +5,8 @@ import { Sun, BookOpen, PieChart, CalendarRange, Search, Moon, LogOut, X } from 
 import { useTheme } from "next-themes"
 import { useSession, signOut } from "next-auth/react"
 import type { Term } from "@/lib/store"
-import { GRADED_TERMS } from "@/lib/grades"
+import { gradedTerms, termNames } from "@/lib/catalog"
+import { useCatalog } from "@/components/app/catalog-gate"
 import { useActiveTerm } from "@/hooks/use-active-term"
 import { useAcademic } from "@/hooks/use-academic"
 import { TodayView } from "@/components/app/today-view"
@@ -33,6 +34,8 @@ export function AppShell() {
   const [course, setCourse] = useState<string | null>(null)
   const [paletteOpen, setPaletteOpen] = useState(false)
   const academic = useAcademic()
+  const { catalog } = useCatalog()          // re-render when the catalogue changes (e.g. weights edited)
+  const terms = gradedTerms(catalog).length ? gradedTerms(catalog) : termNames(catalog)
   const { theme, setTheme } = useTheme()
   const { data: session } = useSession()
   const [mounted, setMounted] = useState(false)   // theme is only known in the browser
@@ -102,7 +105,7 @@ export function AppShell() {
         <header className="sticky top-0 z-20 bg-background/85 backdrop-blur border-b border-border">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 h-14 flex items-center gap-3">
             <div role="tablist" aria-label="Term" className="flex items-center gap-0.5 p-0.5 rounded-full bg-[hsl(var(--muted))]">
-              {GRADED_TERMS.map(t => (
+              {terms.map(t => (
                 <button key={t} role="tab" aria-selected={t === term} onClick={() => changeTerm(t)}
                   className={`text-[11px] font-medium px-3 py-1 rounded-full transition-colors ${t === term ? "bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]" : `${muted} hover:text-[hsl(var(--foreground))]`}`}>
                   <span className="sm:hidden">{t.replace("Term ", "T")}</span><span className="hidden sm:inline">{t}</span>

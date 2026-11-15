@@ -4,19 +4,20 @@
 // Every write is optimistic but REVERTS if the server doesn't confirm it,
 // so the screen never shows something that isn't saved.
 import { useCallback, useEffect, useRef, useState } from "react"
-import { GRADE_WEIGHTS, GRADED_TERMS } from "@/lib/grades"
+import { gradedTerms, termData } from "@/lib/catalog"
 import type { AcademicState, Bonus } from "@/lib/academic"
 
+// Uses the signed-in person's catalogue (loaded by CatalogGate before this runs)
 const emptyScores = (term: string) =>
-  Object.fromEntries(Object.entries(GRADE_WEIGHTS[term] ?? {}).map(([code, w]) => [code, w.map(() => null as number | null)]))
+  Object.fromEntries(Object.entries(termData(term).weights).map(([code, w]) => [code, w.map(() => null as number | null)]))
 
-const initial: AcademicState = {
-  scores: Object.fromEntries(GRADED_TERMS.map(t => [t, emptyScores(t)])),
+const makeInitial = (): AcademicState => ({
+  scores: Object.fromEntries(gradedTerms().map(t => [t, emptyScores(t)])),
   official: {},
   attendance: {},
   practicesDone: new Set(),
   assessmentStatus: {},
-}
+})
 
 async function post(url: string, body: object) {
   const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
@@ -24,9 +25,9 @@ async function post(url: string, body: object) {
 }
 
 export function useAcademic() {
-  const [state, setStateRaw] = useState<AcademicState>(initial)
+  const [state, setStateRaw] = useState<AcademicState>(makeInitial)
   // Synchronous mirror: mutators read the CURRENT value before sending it to the server
-  const ref = useRef<AcademicState>(initial)
+  const ref = useRef<AcademicState>(state)
   const setState = useCallback((fn: (s: AcademicState) => AcademicState) => {
     ref.current = fn(ref.current)
     setStateRaw(ref.current)
@@ -57,7 +58,7 @@ export function useAcademic() {
         fetch("/api/user/attendance").then(r => (r.ok ? r.json() : [])),
         fetch("/api/user/practices").then(r => (r.ok ? r.json() : [])),
         fetch("/api/user/assessments").then(r => (r.ok ? r.json() : [])),
-        ...GRADED_TERMS.map(loadScores),
+        ...gradedTerms().map(loadScores),
         loadBonuses(),
       ])
       const attendance: AcademicState["attendance"] = {}

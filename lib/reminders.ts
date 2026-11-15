@@ -5,9 +5,10 @@
 //  • 48 h and 6 h before each deadline that isn't submitted yet
 import crypto from "crypto"
 import { sql } from "@/lib/db"
-import { DEFAULT_TERM } from "@/lib/store"
 import { buildPlan, type CanvasDates, type PlanItem } from "@/lib/plan"
 import { professorOf, zoomUrl } from "@/lib/academic"
+import { getCatalog } from "@/lib/catalog-server"
+import type { Catalog } from "@/lib/catalog"
 import { ensureUsersTable, usersWithCanvas, type AppUser } from "@/lib/users"
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? "https://study-dashboard-fpy7.vercel.app"
@@ -83,8 +84,7 @@ export async function sessionReminders(now = new Date()) {
   await ensureTable()
   let sent = 0
   for (const user of await usersWithCanvas()) {
-    // Until courses are discovered per user (F2), the built-in timetable only fits its original owner
-    if (user.role !== "student" || !user.legacy_catalog) continue
+    if (user.role !== "student") continue
     sent += await sessionRemindersFor(user, now).catch(err => { console.error(`Reminders ${user.email}:`, err); return 0 })
   }
   return { sent }
@@ -92,21 +92,26 @@ export async function sessionReminders(now = new Date()) {
 
 async function sessionRemindersFor(user: AppUser, now: Date) {
   const email = user.email
+  const catalog = await getCatalog(email)
+  const term = catalog.defaultTerm
+  if (!term) return 0
   const attended = new Set(
     (await sql`SELECT course_code, lesson_number FROM attendance WHERE email = ${email} AND status = 'present'`)
       .map((r: any) => `${r.course_code}|${r.lesson_number}`)
   )
   let sent = 0
-  for (const s of buildPlan(DEFAULT_TERM).filter(i => i.kind === "session")) {
+  for (const s of buildPlan(term, {}, [], catalog).filter(i => i.kind === "session")) {
     const start = instantOf(s, "start"), end = instantOf(s, "end")
-    const prof = professorOf(DEFAULT_TERM, s.courseCode!)
+    const prof = professorOf(term, s.courseCode!, catalog)
     const toStart = start.getTime() - now.getTime()
     const sinceEnd = now.getTime() - end.getTime()
 
     if (toStart > 0 && toStart <= 16 * MIN && prof && await once(`start:${email}:${s.id}`)) {
       await push(user, `🎥 ${s.courseCode} starts in ${Math.round(toStart / MIN)} min`,
-        `${prof.courseName} · live session ${s.sessionNumber}\nPasscode: ${prof.passcode}`,
-        { click: zoomUrl(prof.meetingId), actions: [{ action: "view", label: "Join Zoom", url: zoomUrl(prof.meetingId), clear: true }], priority: 5, tags: ["movie_camera"] })
+        `${prof.courseName} · live session ${s.sessionNumber}${prof.passcode ? `\nPasscode: ${prof.passcode}` : ""}`,
+        prof.meetingId
+          ? { click: zoomUrl(prof.meetingId), actions: [{ action: "view", label: "Join Zoom", url: zoomUrl(prof.meetingId), clear: true }], priority: 5, tags: ["movie_camera"] }
+          : { priority: 5, tags: ["movie_camera"] })
       sent++
     }
     if (sinceEnd >= 0 && sinceEnd <= 60 * MIN && !attended.has(`${s.courseCode}|${s.sessionNumber}`) && await once(`attend:${email}:${s.id}`)) {
@@ -119,14 +124,15 @@ async function sessionRemindersFor(user: AppUser, now: Date) {
 }
 
 // ── Deadlines (hourly, with Canvas dates) ───────────────────────────────
-export async function deadlineReminders(user: AppUser, canvas: CanvasDates, now = new Date()) {
+export async function deadlineReminders(user: AppUser, canvas: CanvasDates, catalog: Catalog, now = new Date()) {
   await ensureTable()
   const email = user.email
+  const term = catalog.defaultTerm
   const done = new Set((await sql`SELECT assessment_id FROM user_assessments WHERE email = ${email} AND status = 'done'`).map((r: any) => r.assessment_id))
-  const graded = new Set((await sql`SELECT course_code, assessment_index FROM grade_scores WHERE email = ${email} AND term = ${DEFAULT_TERM}`)
+  const graded = new Set((await sql`SELECT course_code, assessment_index FROM grade_scores WHERE email = ${email} AND term = ${term}`)
     .map((r: any) => `${r.course_code}|${r.assessment_index}`))
   let sent = 0
-  for (const d of buildPlan(DEFAULT_TERM, canvas).filter(i => i.kind === "deadline")) {
+  for (const d of buildPlan(term, canvas, [], catalog).filter(i => i.kind === "deadline")) {
     if (done.has(d.assessmentId!) || graded.has(`${d.courseCode}|${d.assessmentIdx}`)) continue
     const hoursLeft = (instantOf(d).getTime() - now.getTime()) / (60 * MIN)
     for (const [mark, label] of [[48, "in 2 days"], [6, "in 6 hours"]] as const) {

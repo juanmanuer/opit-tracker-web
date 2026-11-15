@@ -2,7 +2,8 @@
 
 import { useState } from "react"
 import { Download } from "lucide-react"
-import { initialAssessments, initialPractices, TERM_COURSES, type Term } from "@/lib/store"
+import type { Term } from "@/lib/store"
+import { termData } from "@/lib/catalog"
 
 interface Props {
   activeTerm: Term
@@ -45,13 +46,10 @@ export function ExportButton({ activeTerm }: Props) {
       const res = await fetch(`/api/export?term=${encodeURIComponent(activeTerm)}`)
       const data = await res.json()
 
-      const courses = TERM_COURSES[activeTerm]
-      const termAssessments = initialAssessments.filter(a =>
-        courses.some(c => c.code === a.courseCode)
-      )
-      const termPractices = initialPractices.filter(p =>
-        courses.some(c => c.code === p.courseCode)
-      )
+      const td = termData(activeTerm)
+      const courses = td.courses
+      const termAssessments = td.assessments
+      const termPractices = td.practices
 
       // Compute stats
       const statusMap: Record<string, string> = {}

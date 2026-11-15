@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
-import { CANVAS_COURSE_IDS } from "@/lib/grades"
+import { getCatalog } from "@/lib/catalog-server"
 import { getCanvasToken } from "@/lib/canvas-token"
 
 // READ-ONLY diagnostic: shows how Canvas names and grades each assessment.
@@ -11,7 +11,8 @@ export async function GET(req: Request) {
   if (!session?.user?.email) return NextResponse.json({}, { status: 401 })
 
   const term = new URL(req.url).searchParams.get("term") ?? "Term 3"
-  const courses = CANVAS_COURSE_IDS[term]
+  const td = (await getCatalog(session.user.email)).terms[term]
+  const courses = td ? Object.fromEntries(td.courses.filter(c => c.canvasId).map(c => [c.code, c.canvasId!])) : null
   if (!courses) return NextResponse.json({ error: `Unknown term ${term}` }, { status: 400 })
 
   const token = await getCanvasToken(session.user.email)

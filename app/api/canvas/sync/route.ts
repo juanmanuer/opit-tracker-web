@@ -3,18 +3,16 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { sql } from "@/lib/db"
 import { gradeChangeEmailHtml } from "@/lib/email"
-import { CANVAS_COURSE_IDS } from "@/lib/grades"
 import { getCanvasToken } from "@/lib/canvas-token"
-import { TERM_COURSES, type Term } from "@/lib/store"
+import { getCatalog } from "@/lib/catalog-server"
+import type { Catalog } from "@/lib/catalog"
 
 const CANVAS_DOMAIN = process.env.CANVAS_DOMAIN
 let CANVAS_TOKEN: string | null = null // loaded per request (database first, then env)
 
-// Canvas course IDs live in lib/grades.ts (CANVAS_COURSE_IDS)
-function getTermCourses(term: string) {
-  const ids = CANVAS_COURSE_IDS[term] ?? {}
-  const names = Object.fromEntries((TERM_COURSES[term as Term] ?? []).map(c => [c.code, c.name]))
-  return Object.entries(ids).map(([code, id]) => ({ id, code, name: names[code] ?? code }))
+// Canvas course IDs come from the person's catalogue (built-in or discovered)
+function getTermCourses(term: string, cat: Catalog) {
+  return (cat.terms[term]?.courses ?? []).filter(c => c.canvasId).map(c => ({ id: c.canvasId!, code: c.code, name: c.name }))
 }
 
 async function canvasFetch(path: string) {
@@ -59,8 +57,9 @@ export async function GET(req: Request) {
 
     const userEmail = session.user.email
     const { searchParams } = new URL(req.url)
-    const term = searchParams.get("term") ?? "Term 3"
-    const courses = getTermCourses(term)
+    const catalog = await getCatalog(userEmail)
+    const term = searchParams.get("term") ?? catalog.defaultTerm
+    const courses = getTermCourses(term, catalog)
     if (courses.length === 0) {
       return NextResponse.json({ error: `No Canvas courses configured for ${term}` }, { status: 400 })
     }
