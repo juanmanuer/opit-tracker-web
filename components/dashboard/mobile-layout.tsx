@@ -38,7 +38,8 @@ const viewTabs: { key: MainView; label: string; icon: typeof BarChart2 }[] = [
 ]
 
 export function MobileLayout() {
-  const [activeTerm, setActiveTerm] = useActiveTerm()  const [activeSection, setActiveSection] = useState<SidebarSection>("assessments")
+  const [activeTerm, setActiveTerm] = useActiveTerm()  
+  const [activeSection, setActiveSection] = useState<SidebarSection>("assessments")
   const [mainView, setMainView] = useState<MainView>("dashboard")
   const [screen, setScreen] = useState<"section" | "main">("main")
   const [showTermPicker, setShowTermPicker] = useState(false)
