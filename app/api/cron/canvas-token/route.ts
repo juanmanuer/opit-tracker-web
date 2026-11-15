@@ -10,8 +10,8 @@ export async function GET(req: Request) {
   }
   try {
     const result = await dailyTokenCheck()
-    console.log("Canvas token check:", result.action)
-    return NextResponse.json({ action: result.action, daysLeft: result.status.daysLeft })
+    console.log("Canvas token check:", result.map(r => r.action).join(", "))
+    return NextResponse.json({ users: result.length, renewed: result.filter(r => r.action === "renewed").length, failed: result.filter(r => r.action === "failed").length })
   } catch (error) {
     console.error("Canvas token cron error:", error)
     return NextResponse.json({ error: String(error) }, { status: 500 })

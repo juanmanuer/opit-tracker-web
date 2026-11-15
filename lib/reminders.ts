@@ -8,6 +8,7 @@ import { sql } from "@/lib/db"
 import { DEFAULT_TERM } from "@/lib/store"
 import { buildPlan, type CanvasDates, type PlanItem } from "@/lib/plan"
 import { professorOf, zoomUrl } from "@/lib/academic"
+import { ensureUsersTable, usersWithCanvas, type AppUser } from "@/lib/users"
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? "https://study-dashboard-fpy7.vercel.app"
 const MIN = 60_000
@@ -32,35 +33,44 @@ export function instantOf(item: PlanItem, which: "start" | "end" = "start") {
 function sign(payload: string) {
   return crypto.createHmac("sha256", process.env.CRON_SECRET ?? "").update(payload).digest("base64url").slice(0, 32)
 }
-export function attendLink(courseCode: string, lesson: number) {
+export function attendLink(email: string, courseCode: string, lesson: number) {
   const exp = Date.now() + 3 * 24 * 60 * MIN // valid for 3 days
-  const payload = `${courseCode}|${lesson}|${exp}`
-  return `${APP_URL}/api/cron/attend?c=${encodeURIComponent(courseCode)}&n=${lesson}&e=${exp}&s=${sign(payload)}`
+  const payload = `${email}|${courseCode}|${lesson}|${exp}`
+  return `${APP_URL}/api/cron/attend?u=${encodeURIComponent(email)}&c=${encodeURIComponent(courseCode)}&n=${lesson}&e=${exp}&s=${sign(payload)}`
 }
-export function verifyAttend(c: string, n: string, e: string, s: string) {
+export function verifyAttend(u: string, c: string, n: string, e: string, s: string) {
   if (!process.env.CRON_SECRET || Date.now() > Number(e)) return false
-  const expected = sign(`${c}|${n}|${e}`)
+  const expected = sign(`${u}|${c}|${n}|${e}`)
   return s.length === expected.length && crypto.timingSafeEqual(Buffer.from(s), Buffer.from(expected))
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────
+let remindersReady = false
 async function ensureTable() {
+  if (remindersReady) return
   await sql`CREATE TABLE IF NOT EXISTS reminders_sent (key TEXT PRIMARY KEY, sent_at TIMESTAMPTZ NOT NULL DEFAULT now())`
+  await ensureUsersTable()
+  // One-time migration from single-user keys ("start:<id>") to per-user keys ("start:<email>:<id>")
+  const owner = (await sql`SELECT email FROM app_users WHERE legacy_catalog LIMIT 1`.catch(() => []))[0] as any
+  if (owner?.email) {
+    await sql`
+      UPDATE reminders_sent
+      SET key = split_part(key, ':', 1) || ':' || ${owner.email} || ':' || substring(key from position(':' in key) + 1)
+      WHERE key NOT LIKE '%@%'
+    `.catch(() => {})
+  }
+  remindersReady = true
 }
 async function once(key: string): Promise<boolean> {
   // true only the first time this key is claimed
   const rows = await sql`INSERT INTO reminders_sent (key) VALUES (${key}) ON CONFLICT (key) DO NOTHING RETURNING key`
   return rows.length > 0
 }
-export async function ownerEmail(): Promise<string | null> {
-  const rows = await sql`SELECT owner_email FROM canvas_tokens WHERE id = 'main'`.catch(() => [])
-  return (rows[0] as any)?.owner_email ?? process.env.ALERT_EMAIL ?? null
-}
 
 type Action = { action: "view" | "http"; label: string; url: string; method?: string; clear?: boolean }
-export async function push(title: string, message: string, opts: { click?: string; actions?: Action[]; priority?: number; tags?: string[] } = {}) {
-  const topic = process.env.NTFY_TOPIC
-  if (!topic) return
+export async function push(user: Pick<AppUser, "ntfy_topic" | "push_alerts">, title: string, message: string, opts: { click?: string; actions?: Action[]; priority?: number; tags?: string[] } = {}) {
+  const topic = user.ntfy_topic
+  if (!topic || !user.push_alerts) return
   await fetch("https://ntfy.sh/", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -71,8 +81,17 @@ export async function push(title: string, message: string, opts: { click?: strin
 // ── Live sessions (every 5 minutes) ─────────────────────────────────────
 export async function sessionReminders(now = new Date()) {
   await ensureTable()
-  const email = await ownerEmail()
-  if (!email) return { sent: 0, note: "no owner email" }
+  let sent = 0
+  for (const user of await usersWithCanvas()) {
+    // Until courses are discovered per user (F2), the built-in timetable only fits its original owner
+    if (user.role !== "student" || !user.legacy_catalog) continue
+    sent += await sessionRemindersFor(user, now).catch(err => { console.error(`Reminders ${user.email}:`, err); return 0 })
+  }
+  return { sent }
+}
+
+async function sessionRemindersFor(user: AppUser, now: Date) {
+  const email = user.email
   const attended = new Set(
     (await sql`SELECT course_code, lesson_number FROM attendance WHERE email = ${email} AND status = 'present'`)
       .map((r: any) => `${r.course_code}|${r.lesson_number}`)
@@ -84,26 +103,25 @@ export async function sessionReminders(now = new Date()) {
     const toStart = start.getTime() - now.getTime()
     const sinceEnd = now.getTime() - end.getTime()
 
-    if (toStart > 0 && toStart <= 16 * MIN && prof && await once(`start:${s.id}`)) {
-      await push(`🎥 ${s.courseCode} starts in ${Math.round(toStart / MIN)} min`,
+    if (toStart > 0 && toStart <= 16 * MIN && prof && await once(`start:${email}:${s.id}`)) {
+      await push(user, `🎥 ${s.courseCode} starts in ${Math.round(toStart / MIN)} min`,
         `${prof.courseName} · live session ${s.sessionNumber}\nPasscode: ${prof.passcode}`,
         { click: zoomUrl(prof.meetingId), actions: [{ action: "view", label: "Join Zoom", url: zoomUrl(prof.meetingId), clear: true }], priority: 5, tags: ["movie_camera"] })
       sent++
     }
-    if (sinceEnd >= 0 && sinceEnd <= 60 * MIN && !attended.has(`${s.courseCode}|${s.sessionNumber}`) && await once(`attend:${s.id}`)) {
-      await push(`Did you attend ${s.courseCode}?`, `${prof?.courseName ?? s.title} · live session ${s.sessionNumber} just ended.`,
-        { actions: [{ action: "http", label: "✓ Mark attended", url: attendLink(s.courseCode!, s.sessionNumber!), method: "POST", clear: true }], tags: ["white_check_mark"] })
+    if (sinceEnd >= 0 && sinceEnd <= 60 * MIN && !attended.has(`${s.courseCode}|${s.sessionNumber}`) && await once(`attend:${email}:${s.id}`)) {
+      await push(user, `Did you attend ${s.courseCode}?`, `${prof?.courseName ?? s.title} · live session ${s.sessionNumber} just ended.`,
+        { actions: [{ action: "http", label: "✓ Mark attended", url: attendLink(email, s.courseCode!, s.sessionNumber!), method: "POST", clear: true }], tags: ["white_check_mark"] })
       sent++
     }
   }
-  return { sent }
+  return sent
 }
 
 // ── Deadlines (hourly, with Canvas dates) ───────────────────────────────
-export async function deadlineReminders(canvas: CanvasDates, now = new Date()) {
+export async function deadlineReminders(user: AppUser, canvas: CanvasDates, now = new Date()) {
   await ensureTable()
-  const email = await ownerEmail()
-  if (!email) return { sent: 0 }
+  const email = user.email
   const done = new Set((await sql`SELECT assessment_id FROM user_assessments WHERE email = ${email} AND status = 'done'`).map((r: any) => r.assessment_id))
   const graded = new Set((await sql`SELECT course_code, assessment_index FROM grade_scores WHERE email = ${email} AND term = ${DEFAULT_TERM}`)
     .map((r: any) => `${r.course_code}|${r.assessment_index}`))
@@ -112,10 +130,10 @@ export async function deadlineReminders(canvas: CanvasDates, now = new Date()) {
     if (done.has(d.assessmentId!) || graded.has(`${d.courseCode}|${d.assessmentIdx}`)) continue
     const hoursLeft = (instantOf(d).getTime() - now.getTime()) / (60 * MIN)
     for (const [mark, label] of [[48, "in 2 days"], [6, "in 6 hours"]] as const) {
-      if (hoursLeft > 0 && hoursLeft <= mark && await once(`due${mark}:${d.id}`)) {
-        await push(`📌 ${d.courseCode} ${d.title} due ${label}`, `Weight ${d.weight} · ${instantOf(d).toLocaleString("en-GB", { timeZone: "Europe/Malta", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`,
+      if (hoursLeft > 0 && hoursLeft <= mark && await once(`due${mark}:${email}:${d.id}`)) {
+        await push(user, `📌 ${d.courseCode} ${d.title} due ${label}`, `Weight ${d.weight} · ${instantOf(d).toLocaleString("en-GB", { timeZone: "Europe/Malta", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`,
           { click: d.url ?? APP_URL, actions: d.url ? [{ action: "view", label: "Open in Canvas", url: d.url }] : undefined, priority: mark === 6 ? 5 : 4, tags: ["pushpin"] })
-        if (mark === 48) await deadlineEmail(email, d, label)
+        if (mark === 48 && user.email_alerts) await deadlineEmail(email, d, label)
         sent++
         break
       }

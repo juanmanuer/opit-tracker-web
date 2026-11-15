@@ -14,7 +14,7 @@ export async function GET(req: Request) {
   const courses = CANVAS_COURSE_IDS[term]
   if (!courses) return NextResponse.json({ error: `Unknown term ${term}` }, { status: 400 })
 
-  const token = await getCanvasToken()
+  const token = await getCanvasToken(session.user.email)
   const domain = process.env.CANVAS_DOMAIN
   const get = async (path: string) => {
     const res = await fetch(`https://${domain}/api/v1${path}`, { headers: { Authorization: `Bearer ${token}` } })

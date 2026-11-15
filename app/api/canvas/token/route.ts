@@ -10,7 +10,7 @@ export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session?.user?.email) return NextResponse.json({}, { status: 401 })
   try {
-    return NextResponse.json(await getTokenStatus())
+    return NextResponse.json(await getTokenStatus(session.user.email))
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 })
   }
@@ -23,12 +23,12 @@ export async function POST(req: Request) {
   try {
     const body = await req.json()
     if (body.action === "test-digest") {
-      const r = await weeklyDigest()
-      return NextResponse.json({ ...(await getTokenStatus()), digest: r })
+      const r = await weeklyDigest(session.user.email)
+      return NextResponse.json({ ...(await getTokenStatus(session.user.email)), digest: r })
     }
     if (body.action === "test-alert") {
       const r = await sendTestAlert(session.user.email)
-      return NextResponse.json({ ...(await getTokenStatus()), testAlert: r })
+      return NextResponse.json({ ...(await getTokenStatus(session.user.email)), testAlert: r })
     }
     if (body.action === "renew") {
       return NextResponse.json(await renewToken(session.user.email))
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     const token = String(body.token ?? "").trim()
     if (token.length < 20) return NextResponse.json({ error: "That doesn't look like a Canvas token." }, { status: 400 })
     await saveManualToken(token, session.user.email)
-    return NextResponse.json(await getTokenStatus())
+    return NextResponse.json(await getTokenStatus(session.user.email))
   } catch (error) {
     return NextResponse.json({ error: String(error).replace("Error: ", "") }, { status: 400 })
   }

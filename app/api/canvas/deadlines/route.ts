@@ -10,7 +10,7 @@ export async function GET(req: Request) {
   if (!session?.user?.email) return NextResponse.json({}, { status: 401 })
   const term = new URL(req.url).searchParams.get("term") ?? "Term 3"
   try {
-    const courses = await fetchCanvasTermGrades(term)
+    const courses = await fetchCanvasTermGrades(term, session.user.email)
     const out: CanvasDates = {}
     for (const c of courses) out[c.code] = c.assessments.map(a => ({ idx: a.idx, dueAt: a.dueAt ?? null, unlockAt: a.unlockAt ?? null, url: a.url ?? null }))
     return NextResponse.json(out)

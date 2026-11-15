@@ -5,6 +5,7 @@ import { sql } from "@/lib/db"
 import { DEFAULT_TERM, TERM_COURSES, type Term } from "@/lib/store"
 import { fetchCanvasTermGrades, syncTermFromCanvas } from "@/lib/canvas-grades"
 import { deadlineReminders } from "@/lib/reminders"
+import { getUser, usersWithCanvas, type AppUser } from "@/lib/users"
 
 type NewGrade = { courseCode: string; courseName: string; label: string; score: number; previous: number | null }
 
@@ -24,17 +25,21 @@ async function ensureTable() {
   `
 }
 
-async function ownerEmail(): Promise<string | null> {
-  const rows = await sql`SELECT owner_email FROM canvas_tokens WHERE id = 'main'`.catch(() => [])
-  return (rows[0] as any)?.owner_email ?? process.env.ALERT_EMAIL ?? null
+// Cron: every student with a Canvas connection
+export async function checkAllUsers(term: string = DEFAULT_TERM) {
+  await ensureTable()
+  const results: Record<string, unknown> = {}
+  for (const u of await usersWithCanvas()) {
+    if (u.role !== "student") continue
+    results[u.email] = await checkNewGrades(u, term).catch(err => ({ error: String(err) }))
+  }
+  return { users: Object.keys(results).length, results }
 }
 
-export async function checkNewGrades(term: string = DEFAULT_TERM) {
+export async function checkNewGrades(user: AppUser, term: string = DEFAULT_TERM) {
   await ensureTable()
-  const email = await ownerEmail()
-  if (!email) throw new Error("No owner email yet (open the app and press Renew now once)")
-
-  const canvas = await fetchCanvasTermGrades(term)
+  const email = user.email
+  const canvas = await fetchCanvasTermGrades(term, email)
   const seenRows = await sql`SELECT course_code, item_key, score FROM grade_alerts_seen WHERE email = ${email} AND term = ${term}`
   const seen = new Map(seenRows.map((r: any) => [`${r.course_code}|${r.item_key}`, Number(r.score)]))
   const firstRun = seenRows.length === 0
@@ -64,19 +69,19 @@ export async function checkNewGrades(term: string = DEFAULT_TERM) {
   // Keep the app up to date: fill empty boxes + official bonuses (never overwrites your own values)
   if (fresh.length > 0 || firstRun) await syncTermFromCanvas(email, term, { applyFills: true })
 
-  if (fresh.length > 0) await Promise.all([sendEmail(email, term, fresh), sendPush(term, fresh)])
+  if (fresh.length > 0) await Promise.all([user.email_alerts ? sendEmail(email, term, fresh) : null, sendPush(user, term, fresh)])
 
   // Deadline reminders (48 h / 6 h) using the Canvas dates we just fetched
-  if (term === DEFAULT_TERM) {
+  if (term === DEFAULT_TERM && user.legacy_catalog) {
     const dates = Object.fromEntries(canvas.map(c => [c.code, c.assessments.map(x => ({ idx: x.idx, dueAt: x.dueAt ?? null, unlockAt: x.unlockAt ?? null, url: x.url ?? null }))]))
-    await deadlineReminders(dates).catch(err => console.error("Deadline reminders failed:", err))
+    await deadlineReminders(user, dates).catch(err => console.error("Deadline reminders failed:", err))
   }
   return { term, firstRun, newGrades: fresh.length, errors }
 }
 
-async function sendPush(term: string, grades: NewGrade[]) {
-  const topic = process.env.NTFY_TOPIC
-  if (!topic) return
+async function sendPush(user: Pick<AppUser, "ntfy_topic" | "push_alerts">, term: string, grades: NewGrade[]) {
+  const topic = user.ntfy_topic
+  if (!topic || !user.push_alerts) return
   const body = grades.map(g => `${g.courseCode} · ${g.label}: ${g.score}${g.label.includes("bonus") ? " pts" : "%"}`).join("\n")
   await fetch(`https://ntfy.sh/${encodeURIComponent(topic)}`, {
     method: "POST",
@@ -118,7 +123,8 @@ async function sendEmail(to: string, term: string, grades: NewGrade[]) {
 // Test notification from the app (email + phone)
 export async function sendTestAlert(email: string) {
   const sample: NewGrade[] = [{ courseCode: "TEST", courseName: "OPIT Tracker", label: "Alerts are connected ✓", score: 100, previous: null }]
-  const pushOk = !!process.env.NTFY_TOPIC
-  await Promise.all([sendEmail(email, "your tracker", sample), sendPush("your tracker", sample)])
-  return { email: !!process.env.RESEND_API_KEY, push: pushOk }
+  const user = await getUser(email)
+  if (!user) throw new Error("Unknown user")
+  await Promise.all([sendEmail(email, "your tracker", sample), sendPush({ ...user, push_alerts: true }, "your tracker", sample)])
+  return { email: !!process.env.RESEND_API_KEY, push: true, topic: user.ntfy_topic }
 }

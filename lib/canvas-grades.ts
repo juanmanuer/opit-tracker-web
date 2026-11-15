@@ -31,8 +31,8 @@ function assessmentIndex(name: string): number | null {
   return m ? parseInt(m[1], 10) - 1 : null
 }
 
-export async function fetchCanvasTermGrades(term: string): Promise<CanvasCourse[]> {
-  const token = await getCanvasToken()
+export async function fetchCanvasTermGrades(term: string, email: string): Promise<CanvasCourse[]> {
+  const token = await getCanvasToken(email)
   if (!token) throw new Error("No Canvas token")
   const courses = CANVAS_COURSE_IDS[term] ?? {}
 
@@ -130,7 +130,7 @@ export async function writeBonus(email: string, term: string, courseCode: string
 // different values are returned as conflicts for the user to review.
 export async function syncTermFromCanvas(email: string, term: string, opts: { applyFills: boolean }) {
   await ensureGradeSchema()
-  const [canvas, app] = await Promise.all([fetchCanvasTermGrades(term), readAppScores(email, term)])
+  const [canvas, app] = await Promise.all([fetchCanvasTermGrades(term, email), readAppScores(email, term)])
 
   const filled: { courseCode: string; idx: number; name: string; score: number }[] = []
   const conflicts: { courseCode: string; idx: number; name: string; canvas: number; app: number }[] = []

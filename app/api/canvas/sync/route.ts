@@ -64,9 +64,9 @@ export async function GET(req: Request) {
     if (courses.length === 0) {
       return NextResponse.json({ error: `No Canvas courses configured for ${term}` }, { status: 400 })
     }
-    CANVAS_TOKEN = await getCanvasToken()
+    CANVAS_TOKEN = await getCanvasToken(userEmail)
     if (!CANVAS_DOMAIN || !CANVAS_TOKEN) {
-      return NextResponse.json({ error: "Canvas is not configured (CANVAS_DOMAIN / CANVAS_TOKEN missing)" }, { status: 500 })
+      return NextResponse.json({ error: "Connect your Canvas first: Grades → Canvas token → paste a token." }, { status: 400 })
     }
 
     const results = await Promise.all(

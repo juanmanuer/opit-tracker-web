@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { weeklyDigest } from "@/lib/digest"
+import { weeklyDigestAll } from "@/lib/digest"
 
 // Sundays 17:00 UTC (18:00 Brussels) via Vercel Cron — see vercel.json
 export async function GET(req: Request) {
@@ -8,7 +8,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
   try {
-    return NextResponse.json(await weeklyDigest())
+    return NextResponse.json(await weeklyDigestAll())
   } catch (error) {
     console.error("Weekly digest error:", error)
     return NextResponse.json({ error: String(error) }, { status: 500 })

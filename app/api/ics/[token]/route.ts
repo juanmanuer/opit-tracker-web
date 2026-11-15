@@ -13,7 +13,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
 
   let canvas: CanvasDates = {}
   try {
-    for (const c of await fetchCanvasTermGrades(DEFAULT_TERM)) {
+    for (const c of await fetchCanvasTermGrades(DEFAULT_TERM, email)) {
       canvas[c.code] = c.assessments.map(a => ({ idx: a.idx, dueAt: a.dueAt ?? null, unlockAt: a.unlockAt ?? null, url: a.url ?? null }))
     }
   } catch { canvas = {} } // fall back to the dates stored in the app

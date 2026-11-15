@@ -5,7 +5,8 @@ import { GRADE_WEIGHTS } from "@/lib/grades"
 import { coursesOf, courseResult, termResult, bonusInfo, LIVE_NEEDED, LIVE_SESSIONS_PER_COURSE, type AcademicState, type Bonus } from "@/lib/academic"
 import { buildPlan, type CanvasDates } from "@/lib/plan"
 import { fetchCanvasTermGrades } from "@/lib/canvas-grades"
-import { instantOf, ownerEmail, push } from "@/lib/reminders"
+import { instantOf, push } from "@/lib/reminders"
+import { getUser, usersWithCanvas } from "@/lib/users"
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? "https://study-dashboard-fpy7.vercel.app"
 const DAY = 86_400_000
@@ -35,14 +36,24 @@ async function loadState(email: string, term: string): Promise<AcademicState> {
   }
 }
 
-export async function weeklyDigest(now = new Date(), term = DEFAULT_TERM) {
-  const email = await ownerEmail()
-  if (!email) throw new Error("No owner email yet")
+// Cron: one digest per student whose timetable is known (built-in catalog until F2)
+export async function weeklyDigestAll(now = new Date()) {
+  const results: Record<string, unknown> = {}
+  for (const u of await usersWithCanvas()) {
+    if (u.role !== "student" || !u.legacy_catalog) continue
+    results[u.email] = await weeklyDigest(u.email, now).catch(err => ({ error: String(err) }))
+  }
+  return results
+}
+
+export async function weeklyDigest(email: string, now = new Date(), term = DEFAULT_TERM) {
+  const user = await getUser(email)
+  if (!user) throw new Error("Unknown user")
   const state = await loadState(email, term)
 
   let canvas: CanvasDates = {}
   try {
-    for (const c of await fetchCanvasTermGrades(term)) canvas[c.code] = c.assessments.map(a => ({ idx: a.idx, dueAt: a.dueAt ?? null, unlockAt: a.unlockAt ?? null, url: a.url ?? null }))
+    for (const c of await fetchCanvasTermGrades(term, email)) canvas[c.code] = c.assessments.map(a => ({ idx: a.idx, dueAt: a.dueAt ?? null, unlockAt: a.unlockAt ?? null, url: a.url ?? null }))
   } catch { /* fall back to saved dates */ }
 
   const plan = buildPlan(term, canvas)
@@ -101,7 +112,7 @@ export async function weeklyDigest(now = new Date(), term = DEFAULT_TERM) {
       <div style="padding:18px 20px"><a href="${APP_URL}/#plan" style="color:#00d4ff">Open your plan →</a></div>
     </div></div>`
 
-  if (process.env.RESEND_API_KEY) {
+  if (process.env.RESEND_API_KEY && user.email_alerts) {
     await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
@@ -110,7 +121,7 @@ export async function weeklyDigest(now = new Date(), term = DEFAULT_TERM) {
   }
 
   const pending = deadlines.filter(d => !d.done)
-  await push("🗓️ Your week ahead",
+  await push(user, "🗓️ Your week ahead",
     [
       pending.length ? `📌 ${pending.map(d => `${d.i.courseCode!.split("-")[1]} ${d.i.title.replace("Assessment ", "A")} (${malta(instantOf(d.i), { weekday: "short" })})`).join(", ")}` : "📌 Nothing due",
       `🎥 ${sessions.length} live sessions`,

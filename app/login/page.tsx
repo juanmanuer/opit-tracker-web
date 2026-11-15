@@ -20,7 +20,7 @@ const TOKENS = [
 ]
 
 const ERRORS: Record<string, string> = {
-  AccessDenied: "Access denied. Use your @students.opit.com account.",
+  AccessDenied: "Access denied. Sign in with your OPIT Google account (any @opit.com address).",
   OAuthSignin: "Couldn't reach Google. Try again.",
   OAuthCallback: "Google sign-in was interrupted. Try again.",
   Default: "Sign-in failed. Try again.",
@@ -139,6 +139,8 @@ export default function LoginPage() {
 
               <div className="mt-5 flex items-center justify-center gap-2 text-[11px] text-slate-400">
                 <span className="font-mono rounded-md bg-white/5 border border-white/10 px-2 py-0.5 text-cyan-300">@students.opit.com</span>
+                <span>·</span>
+                <span className="font-mono rounded-md bg-white/5 border border-white/10 px-2 py-0.5 text-cyan-300">@faculty.opit.com</span>
                 <span>·</span>
                 <span className="font-mono rounded-md bg-white/5 border border-white/10 px-2 py-0.5 text-cyan-300">@opit.com</span>
               </div>
