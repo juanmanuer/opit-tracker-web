@@ -111,7 +111,7 @@ export function AppShell() {
           </div>
         )}
 
-        <main className="mx-auto max-w-6xl px-4 sm:px-6 py-5">
+        <main className={`mx-auto ${view === "plan" ? "max-w-[1600px]" : "max-w-6xl"} px-4 sm:px-6 py-5`}>
           {!academic.loaded ? (
             <div className="grid gap-3 md:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-32 rounded-2xl bg-[hsl(var(--muted)/0.6)] animate-pulse" />)}

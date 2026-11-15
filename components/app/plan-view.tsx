@@ -89,120 +89,190 @@ function Runway({ term, items, academic, color, now, selected, onSelect }: {
   selected: PlanItem | null; onSelect: (i: PlanItem) => void
 }) {
   const { state } = academic
-  const start = termMonday(term)
-  const lastDeadline = Math.max(...items.filter(i => i.kind === "deadline").map(i => i.start.getTime()), start.getTime() + TERM_WEEKS * 7 * DAY)
-  const weeks = Math.max(TERM_WEEKS, Math.ceil((lastDeadline - start.getTime()) / (7 * DAY)) + 1)
-  const span = weeks * 7 * DAY
-  const x = (d: Date) => Math.min(100, Math.max(0, ((d.getTime() - start.getTime()) / span) * 100))
+  const termStart = termMonday(term)
+  const lastDeadline = Math.max(...items.filter(i => i.kind === "deadline").map(i => i.start.getTime()), addDays(termStart, TERM_WEEKS * 7).getTime())
+  const termWeeks = Math.max(TERM_WEEKS, Math.ceil((lastDeadline - termStart.getTime()) / (7 * DAY)) + 1)
+  const termEnd = addDays(termStart, termWeeks * 7)
+  const nowInTerm = now >= termStart && now < termEnd
+
+  // Zoom: whole term, or a window around today
+  const [zoom, setZoom] = useState<"term" | "8w" | "4w">(nowInTerm ? "8w" : "term")
+  const span = zoom === "term" ? termWeeks : zoom === "8w" ? 8 : 4
+  const rangeStart = zoom === "term" || !nowInTerm ? termStart : addDays(mondayOf(now), -7)
+  const rangeEnd = addDays(rangeStart, span * 7)
+  const detailed = zoom !== "term"
+  const total = rangeEnd.getTime() - rangeStart.getTime()
+  const x = (d: Date) => ((d.getTime() - rangeStart.getTime()) / total) * 100
+  const inRange = (d: Date) => d >= rangeStart && d < rangeEnd
+  const weeks = Array.from({ length: span }, (_, i) => addDays(rangeStart, i * 7))
+  const days = detailed ? Array.from({ length: span * 7 }, (_, i) => addDays(rangeStart, i)) : []
+  const termWeekNo = (d: Date) => Math.round((mondayOf(d).getTime() - termStart.getTime()) / (7 * DAY)) + 1
   const courses = coursesOf(term)
 
-  const load = Array.from({ length: weeks }, () => 0)
-  items.filter(i => i.kind === "deadline").forEach(i => {
-    const w = Math.floor((i.start.getTime() - start.getTime()) / (7 * DAY))
-    if (w >= 0 && w < weeks) load[w] += parseFloat(i.weight ?? "0") || 0
-  })
+  const load = weeks.map(w => items.filter(i => i.kind === "deadline" && i.start >= w && i.start < addDays(w, 7))
+    .reduce((n, i) => n + (parseFloat(i.weight ?? "0") || 0), 0))
   const maxLoad = Math.max(...load, 1)
-  const showToday = now >= start && now.getTime() <= start.getTime() + span
-  const personal = items.filter(i => i.kind === "personal")
+  const personal = items.filter(i => i.kind === "personal" && inRange(i.start))
+  const LABEL = 168
+  const rowH = detailed ? 84 : 66
 
   return (
-    <div className={`${card} p-4 overflow-x-auto`}>
-      <div className="min-w-[760px]">
-        {/* Load strip */}
-        <div className="grid grid-cols-[130px_minmax(0,1fr)] items-center mb-1">
-          <span className={`text-[11px] ${muted}`}>Workload</span>
-          <div className="flex gap-[2px] h-4">
-            {load.map((v, i) => (
-              <div key={i} title={`Week ${i + 1}: ${v ? `${v}% of grades due` : "nothing due"}`} className="flex-1 rounded-[3px]"
-                style={{ backgroundColor: v ? `rgba(234,88,12,${0.15 + 0.85 * (v / maxLoad)})` : "hsl(var(--muted) / 0.6)" }} />
-            ))}
-          </div>
+    <div className={`${card} p-4`}>
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <p className={`text-sm font-medium ${fg}`}>
+          {rangeStart.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} – {addDays(rangeEnd, -1).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+        </p>
+        <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-[hsl(var(--muted))]">
+          {([["term", "Term"], ["8w", "8 weeks"], ["4w", "4 weeks"]] as const).map(([k, label]) => (
+            <button key={k} onClick={() => setZoom(k)} disabled={k !== "term" && !nowInTerm}
+              className={`text-[11px] font-medium px-2.5 py-1 rounded-md transition-colors disabled:opacity-40 ${zoom === k ? "bg-card shadow-sm text-[hsl(var(--foreground))]" : muted}`}>{label}</button>
+          ))}
         </div>
-        {/* Week labels */}
-        <div className="grid grid-cols-[130px_minmax(0,1fr)] mb-1">
-          <span />
-          <div className="relative h-4">
-            {Array.from({ length: weeks }, (_, i) => i).filter(i => i % 2 === 0).map(i => {
-              const d = addDays(start, i * 7)
-              return <span key={i} className={`absolute text-[10px] ${muted}`} style={{ left: `${(i / weeks) * 100}%` }}>W{i + 1} · {d.getDate()} {d.toLocaleDateString("en-GB", { month: "short" })}</span>
-            })}
-          </div>
-        </div>
+      </div>
 
-        <div className="relative">
-          {courses.map(c => {
-            const r = courseResult(state, term, c.code)
-            const rowItems = items.filter(i => i.courseCode === c.code)
-            return (
-              <div key={c.code} className="grid grid-cols-[130px_minmax(0,1fr)] items-center border-b border-border last:border-0">
-                <div className="py-2 pr-2">
-                  <p className="text-[11px] font-mono font-semibold" style={{ color: c.color }}>{c.code}</p>
-                  <p className={`text-xs truncate ${muted}`}>{c.name}</p>
-                </div>
-                <div className="relative h-12">
-                  {/* Live sessions as ticks: filled = attended */}
-                  {rowItems.filter(i => i.kind === "session").map(i => {
-                    const att = state.attendance[c.code]?.[i.sessionNumber!] === "present"
-                    const past = i.end < now
-                    return <button key={i.id} onClick={() => onSelect(i)} title={`${i.title} · ${fmtDay(i.start)}${att ? " · attended" : past ? " · not marked" : ""}`}
-                      className="absolute bottom-1.5 h-2 w-2 -translate-x-1/2 rounded-full transition-transform hover:scale-150"
-                      style={{ left: `${x(i.start)}%`, backgroundColor: att ? c.color : "transparent", border: `1.5px solid ${c.color}`, opacity: att ? 1 : past ? 0.8 : 0.3 }} />
-                  })}
-                  {/* Deadlines: work window + diamond */}
-                  {rowItems.filter(i => i.kind === "deadline").map(i => {
-                    const score = r.scores[i.assessmentIdx!]
-                    const status = state.assessmentStatus[i.assessmentId!]
-                    const done = score != null || status === "done"
-                    const late = !done && i.start < now
-                    const isSel = selected?.id === i.id
-                    return (
-                      <div key={i.id}>
-                        {!done && i.windowStart && (
-                          <div className="absolute top-[18px] h-1.5 rounded-full" style={{ left: `${x(i.windowStart)}%`, width: `${x(i.start) - x(i.windowStart)}%`, backgroundColor: c.color, opacity: 0.28 }} />
-                        )}
-                        {score != null && <span className="absolute top-0 -translate-x-1/2 text-[10px] font-semibold text-emerald-400" style={{ left: `${x(i.start)}%` }}>{score}</span>}
-                        <button onClick={() => onSelect(i)} title={`${c.code} ${i.title} · ${fmtDay(i.start)} · ${i.weight}`}
-                          className={`absolute top-[14px] h-3.5 w-3.5 -translate-x-1/2 rotate-45 rounded-[3px] transition-transform hover:scale-125 ${isSel ? "ring-2 ring-offset-2 ring-offset-[hsl(var(--card))]" : ""}`}
+      <div className="overflow-x-auto">
+        <div style={{ minWidth: detailed ? 900 : 820 }}>
+          {/* Week header + workload */}
+          <div className="flex">
+            <div style={{ width: LABEL }} className="shrink-0 flex flex-col justify-end pb-1">
+              <span className={`text-[11px] ${muted}`}>Workload</span>
+            </div>
+            <div className="flex-1 flex">
+              {weeks.map((w, i) => {
+                const isNow = now >= w && now < addDays(w, 7)
+                const newMonth = i === 0 || w.getMonth() !== weeks[i - 1].getMonth()
+                return (
+                  <div key={i} className="flex-1 px-[1px]">
+                    <p className={`text-[10px] h-3.5 leading-none ${muted}`}>{newMonth ? w.toLocaleDateString("en-GB", { month: "long" }) : ""}</p>
+                    <p className={`text-[11px] ${isNow ? "text-[hsl(var(--primary))] font-semibold" : fg}`}>
+                      W{termWeekNo(w)} <span className={`text-[10px] ${muted}`}>{w.getDate()}</span>
+                    </p>
+                    <div title={load[i] ? `${load[i]}% of grades due` : "Nothing due"}
+                      className="mt-1 h-5 rounded-md flex items-center justify-center text-[10px] font-semibold"
+                      style={{ backgroundColor: load[i] ? `rgba(234,88,12,${0.18 + 0.82 * (load[i] / maxLoad)})` : "hsl(var(--muted) / 0.6)", color: load[i] / maxLoad > 0.5 ? "#fff" : "rgb(234,88,12)" }}>
+                      {load[i] ? `${Math.round(load[i])}%` : ""}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Rows */}
+          <div className="relative mt-2">
+            {/* Background grid: weeks (and days when zoomed) */}
+            <div className="absolute inset-y-0 right-0 pointer-events-none flex" style={{ left: LABEL }}>
+              {detailed
+                ? days.map((d, i) => (
+                    <div key={i} className={`flex-1 border-l ${d.getDay() === 1 ? "border-border" : "border-border/30"} ${d.getDay() === 0 || d.getDay() === 6 ? "bg-[hsl(var(--muted)/0.35)]" : ""}`} />
+                  ))
+                : weeks.map((_, i) => <div key={i} className={`flex-1 border-l border-border/50 ${i % 2 ? "bg-[hsl(var(--muted)/0.25)]" : ""}`} />)}
+            </div>
+
+            {courses.map(c => {
+              const r = courseResult(state, term, c.code)
+              const rowItems = items.filter(i => i.courseCode === c.code)
+              return (
+                <div key={c.code} className="relative flex border-b border-border last:border-0" style={{ height: rowH }}>
+                  <div style={{ width: LABEL }} className="shrink-0 pr-3 flex flex-col justify-center bg-card z-10">
+                    <p className="text-[11px] font-mono font-semibold flex items-center gap-1.5" style={{ color: c.color }}>
+                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: c.color }} />{c.code}
+                    </p>
+                    <p className={`text-xs truncate ${fg}`}>{c.name}</p>
+                    <p className={`text-[10px] ${muted}`}>
+                      {r.total !== null ? <span className="font-semibold" style={{ color: c.color }}>{r.total.toFixed(1)}</span> : "—"} · live {r.bonus.attended}/13{r.bonus.live ? " ✓" : ""}
+                    </p>
+                  </div>
+                  <div className="relative flex-1">
+                    {/* Sessions */}
+                    {rowItems.filter(i => i.kind === "session" && inRange(i.start)).map(i => {
+                      const att = state.attendance[c.code]?.[i.sessionNumber!] === "present"
+                      const past = i.end < now
+                      const size = detailed ? 18 : 9
+                      return (
+                        <button key={i.id} onClick={() => onSelect(i)} title={`${i.title} · ${fmtDay(i.start)} ${fmtTime(i.start)}${att ? " · attended" : past ? " · not marked" : ""}`}
+                          className="absolute -translate-x-1/2 rounded-full flex items-center justify-center text-[9px] font-semibold transition-transform hover:scale-125"
                           style={{
-                            left: `${x(i.start)}%`,
-                            backgroundColor: score != null ? "#16A34A" : done ? c.color : "hsl(var(--card))",
-                            border: `2px solid ${late ? "hsl(var(--destructive))" : score != null ? "#16A34A" : c.color}`,
-                            ["--tw-ring-color" as any]: c.color,
-                          }} />
-                      </div>
-                    )
-                  })}
+                            left: `${x(i.start)}%`, bottom: 8, width: size, height: size,
+                            backgroundColor: att ? c.color : "hsl(var(--card))", color: att ? "#fff" : c.color,
+                            border: `1.5px ${past && !att ? "dashed" : "solid"} ${c.color}`, opacity: att ? 1 : past ? 0.85 : 0.45,
+                          }}>
+                          {detailed ? i.sessionNumber : ""}
+                        </button>
+                      )
+                    })}
+                    {/* Deadlines */}
+                    {rowItems.filter(i => i.kind === "deadline").map(i => {
+                      const score = r.scores[i.assessmentIdx!]
+                      const status = state.assessmentStatus[i.assessmentId!]
+                      const done = score != null || status === "done"
+                      const late = !done && i.start < now
+                      const isSel = selected?.id === i.id
+                      const winStart = i.windowStart && i.windowStart > rangeStart ? i.windowStart : rangeStart
+                      const showWindow = !done && i.windowStart && i.start > rangeStart && winStart < rangeEnd
+                      const label = `${i.title.replace("Assessment ", "A")}${detailed ? ` · ${i.start.getDate()} ${i.start.toLocaleDateString("en-GB", { month: "short" })} · ${i.weight}` : ""}`
+                      return (
+                        <div key={i.id}>
+                          {showWindow && (
+                            <div className="absolute h-2 rounded-full" style={{ top: detailed ? 22 : 18, left: `${Math.max(0, x(winStart))}%`, width: `${Math.min(100, x(i.start)) - Math.max(0, x(winStart))}%`, backgroundColor: c.color, opacity: 0.22 }} />
+                          )}
+                          {inRange(i.start) && (
+                            <button onClick={() => onSelect(i)} className="absolute -translate-x-1/2 flex flex-col items-center group" style={{ left: `${x(i.start)}%`, top: detailed ? 12 : 9 }}
+                              title={`${c.code} ${i.title} · ${fmtDay(i.start)} ${fmtTime(i.start)} · ${i.weight}`}>
+                              <span className={`block rotate-45 rounded-[4px] transition-transform group-hover:scale-125 ${isSel ? "ring-2 ring-offset-2 ring-offset-[hsl(var(--card))]" : ""}`}
+                                style={{
+                                  width: detailed ? 20 : 16, height: detailed ? 20 : 16,
+                                  backgroundColor: score != null ? "#16A34A" : done ? c.color : "hsl(var(--card))",
+                                  border: `2.5px solid ${late ? "hsl(var(--destructive))" : score != null ? "#16A34A" : c.color}`,
+                                  ["--tw-ring-color" as any]: c.color,
+                                }} />
+                              <span className={`mt-1.5 whitespace-nowrap text-[10px] font-medium px-1 rounded ${late ? "text-[hsl(var(--destructive))]" : ""}`}
+                                style={{ color: late ? undefined : score != null ? "#16A34A" : c.color, backgroundColor: "hsl(var(--card) / 0.85)" }}>
+                                {score != null ? `${label} · ${score}` : label}
+                              </span>
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+
+            {personal.length > 0 && (
+              <div className="relative flex border-t border-border" style={{ height: 40 }}>
+                <p style={{ width: LABEL }} className={`shrink-0 text-xs self-center bg-card z-10 ${muted}`}>Personal</p>
+                <div className="relative flex-1">
+                  {personal.map(i => (
+                    <button key={i.id} onClick={() => onSelect(i)} title={`${i.title} · ${fmtDay(i.start)}`}
+                      className="absolute top-2.5 -translate-x-1/2 flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-md whitespace-nowrap hover:brightness-110"
+                      style={{ left: `${x(i.start)}%`, backgroundColor: "#0891B226", color: "#0891B2" }}>
+                      ● {detailed ? i.title : ""}
+                    </button>
+                  ))}
                 </div>
               </div>
-            )
-          })}
-          {personal.length > 0 && (
-            <div className="grid grid-cols-[130px_minmax(0,1fr)] items-center border-t border-border">
-              <p className={`text-xs py-2 ${muted}`}>Personal</p>
-              <div className="relative h-9">
-                {personal.map(i => (
-                  <button key={i.id} onClick={() => onSelect(i)} title={`${i.title} · ${fmtDay(i.start)}`}
-                    className="absolute top-3 h-3 w-3 -translate-x-1/2 rounded-full bg-[hsl(var(--primary))] hover:scale-125 transition-transform" style={{ left: `${x(i.start)}%` }} />
-                ))}
-              </div>
-            </div>
-          )}
-          {/* Today line */}
-          {showToday && (
-            <div className="absolute top-0 bottom-0 pointer-events-none" style={{ left: `calc(130px + (100% - 130px) * ${x(now) / 100})` }}>
-              <div className="h-full w-0.5 bg-[hsl(var(--destructive))]" />
-              <span className="absolute -bottom-4 -translate-x-1/2 text-[9px] font-semibold text-[hsl(var(--destructive))]">TODAY</span>
-            </div>
-          )}
-        </div>
+            )}
 
-        <div className={`flex flex-wrap gap-4 mt-3 text-[11px] ${muted}`}>
-          <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rotate-45 rounded-[2px] bg-emerald-600" /> Graded</span>
-          <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rotate-45 rounded-[2px] bg-[hsl(var(--muted-foreground))]" /> Submitted</span>
-          <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rotate-45 rounded-[2px] border-2 border-[hsl(var(--muted-foreground))]" /> To do</span>
-          <span className="flex items-center gap-1.5"><span className="h-1.5 w-4 rounded-full bg-[hsl(var(--muted-foreground))] opacity-40" /> Work window</span>
-          <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[hsl(var(--muted-foreground))]" /> Live session attended</span>
-          <span className="flex items-center gap-1.5"><span className="h-3 w-0.5 bg-[hsl(var(--destructive))]" /> Today</span>
+            {/* Today line */}
+            {inRange(now) && (
+              <div className="absolute top-0 bottom-0 pointer-events-none z-20" style={{ left: `calc(${LABEL}px + (100% - ${LABEL}px) * ${x(now) / 100})` }}>
+                <div className="h-full w-0.5 bg-[hsl(var(--destructive))]" />
+                <span className="absolute -top-2 -translate-x-1/2 text-[9px] font-bold px-1 rounded bg-[hsl(var(--destructive))] text-white">TODAY</span>
+              </div>
+            )}
+          </div>
+
+          <div className={`flex flex-wrap gap-4 mt-3 text-[11px] ${muted}`}>
+            <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rotate-45 rounded-[2px] bg-emerald-600" /> Graded</span>
+            <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rotate-45 rounded-[2px] bg-[hsl(var(--muted-foreground))]" /> Submitted</span>
+            <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rotate-45 rounded-[2px] border-2 border-[hsl(var(--muted-foreground))]" /> To do</span>
+            <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rotate-45 rounded-[2px] border-2 border-[hsl(var(--destructive))]" /> Late</span>
+            <span className="flex items-center gap-1.5"><span className="h-2 w-4 rounded-full bg-[hsl(var(--muted-foreground))] opacity-30" /> Work window</span>
+            <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[hsl(var(--muted-foreground))]" /> Session attended</span>
+            <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full border border-dashed border-[hsl(var(--muted-foreground))]" /> Not marked</span>
+          </div>
         </div>
       </div>
     </div>
