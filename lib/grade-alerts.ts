@@ -4,6 +4,7 @@
 import { sql } from "@/lib/db"
 import { DEFAULT_TERM, TERM_COURSES, type Term } from "@/lib/store"
 import { fetchCanvasTermGrades, syncTermFromCanvas } from "@/lib/canvas-grades"
+import { deadlineReminders } from "@/lib/reminders"
 
 type NewGrade = { courseCode: string; courseName: string; label: string; score: number; previous: number | null }
 
@@ -64,6 +65,12 @@ export async function checkNewGrades(term: string = DEFAULT_TERM) {
   if (fresh.length > 0 || firstRun) await syncTermFromCanvas(email, term, { applyFills: true })
 
   if (fresh.length > 0) await Promise.all([sendEmail(email, term, fresh), sendPush(term, fresh)])
+
+  // Deadline reminders (48 h / 6 h) using the Canvas dates we just fetched
+  if (term === DEFAULT_TERM) {
+    const dates = Object.fromEntries(canvas.map(c => [c.code, c.assessments.map(x => ({ idx: x.idx, dueAt: x.dueAt ?? null, unlockAt: x.unlockAt ?? null, url: x.url ?? null }))]))
+    await deadlineReminders(dates).catch(err => console.error("Deadline reminders failed:", err))
+  }
   return { term, firstRun, newGrades: fresh.length, errors }
 }
 

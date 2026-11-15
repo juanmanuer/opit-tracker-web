@@ -51,6 +51,23 @@ export function AppShell() {
     window.scrollTo({ top: 0 })
   }
   const openCourse = (code: string) => navigate("courses", code)
+
+  // Keyboard shortcuts: G then T / C / G / P
+  useEffect(() => {
+    let pendingG = 0
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement
+      if (e.ctrlKey || e.metaKey || e.altKey || el.closest("input, textarea, select, [contenteditable=true], [cmdk-root]")) return
+      const k = e.key.toLowerCase()
+      if (pendingG && Date.now() - pendingG < 1200) {
+        const map: Record<string, View> = { t: "today", c: "courses", g: "grades", p: "plan" }
+        if (map[k]) { e.preventDefault(); navigate(map[k]) }
+        pendingG = 0
+      } else if (k === "g") pendingG = Date.now()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  })
   const changeTerm = (t: string) => { setTerm(t as Term); setCourse(null) }
 
   return (
