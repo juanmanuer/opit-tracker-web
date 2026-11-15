@@ -11,3 +11,13 @@ node_modules/
 .env*.local
 .DS_Store
 /lib/generated/prisma
+
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Local editor / build files
+.vs/
+tsconfig.tsbuildinfo
+*.patch
